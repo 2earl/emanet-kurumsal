@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "emanet-kurumsal",
+  // The 2earl Cloudflare account. An identifier, not a credential; deploys need only the token.
+  "account_id": "304c2b77d734c688c8309d5a535f561a",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   // Webhook deliveries go only to public addresses; the language engine uses AsyncLocalStorage.
