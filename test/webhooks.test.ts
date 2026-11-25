@@ -86,6 +86,35 @@ describe('delivery', () => {
     expect(await sendDue(env, now(), fake)).toBe(0);
   });
 
+  it('tells the partner when 2earl rejects a case it couldn’t identify', async () => {
+    await createWebhook(
+      env,
+      {
+        orgId: 'org-1',
+        url: 'https://bank.example/rejections',
+        events: ['case.rejected'],
+        uid: 'owner-1',
+      },
+      now(),
+    );
+    await coreHooks().testAddEvent('org-1', 'case.rejected', {
+      case_id: 'c-9',
+      external_ref: 'K-9',
+      reason: 'Wrong chassis number',
+    });
+    expect(await enqueueEvents(env, now())).toBe(1);
+    const bodies: string[] = [];
+    const fake = ((_url: string, init: RequestInit) => {
+      bodies.push(init.body as string);
+      return Promise.resolve(new Response('ok', { status: 200 }));
+    }) as unknown as typeof fetch;
+    expect(await sendDue(env, now(), fake)).toBe(1);
+    expect(JSON.parse(bodies[0] ?? '{}')).toMatchObject({
+      type: 'case.rejected',
+      data: { external_ref: 'K-9', reason: 'Wrong chassis number' },
+    });
+  });
+
   it('retries with backoff, and switches a failing webhook off', async () => {
     await createWebhook(
       env,
