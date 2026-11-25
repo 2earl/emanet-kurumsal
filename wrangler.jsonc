@@ -1,0 +1,76 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "emanet-kurumsal",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // Webhook deliveries go only to public addresses; the language engine uses AsyncLocalStorage.
+  "compatibility_flags": ["global_fetch_strictly_public", "nodejs_als"],
+
+  // Served at https://emanet-kurumsal.2earl.com (custom domain, created on deploy).
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "emanet-kurumsal.2earl.com", "custom_domain": true }],
+
+  // Invocation logs could record case data.
+  "observability": {
+    "enabled": false,
+  },
+
+  "vars": {
+    "SITE_ORIGIN": "https://emanet-kurumsal.2earl.com",
+    "AUTHORIZATION_SERVER": "https://login.2earl.com",
+  },
+
+  // Set by the deploy workflow from the GitHub `production` environment.
+  "secrets": {
+    "required": [
+      // HMAC key for session and sign-in cookies and for API keys (only HMACs are stored).
+      "SESSION_PEPPER",
+      // AES-GCM key (base64, 32 bytes) that encrypts webhook signing secrets at rest.
+      "WEBHOOK_KEY",
+    ],
+  },
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
+
+  "services": [
+    // Token exchange and validation for sign-in, never over the public Internet.
+    { "binding": "AUTH_SERVER", "service": "login" },
+    // Which organizations a person belongs to, and their role in each (login DESIGN §4.14).
+    { "binding": "ORGS", "service": "login", "entrypoint": "OrganizationDirectory" },
+    // Emanet's data and rules: this app may only do what a creditor may (emanet-core).
+    { "binding": "CORE", "service": "emanet-core", "entrypoint": "PartnerApi" },
+  ],
+
+  // Per network for sign-in and forms; per API key for the API.
+  "ratelimits": [
+    {
+      "name": "FORM_RATE_LIMITER",
+      "namespace_id": "2001",
+      "simple": { "limit": 20, "period": 60 },
+    },
+    {
+      "name": "API_RATE_LIMITER",
+      "namespace_id": "2002",
+      "simple": { "limit": 300, "period": 60 },
+    },
+  ],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "emanet-kurumsal",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+
+  // Every minute: deliver webhooks (src/webhooks.ts).
+  "triggers": {
+    "crons": ["* * * * *"],
+  },
+}
