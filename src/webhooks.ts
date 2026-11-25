@@ -10,7 +10,12 @@ import { base64url, randomToken } from './http';
  * minutes off. `Emanet-Event-Id` lets them ignore a repeat.
  */
 
-export const EVENT_TYPES = ['case.delivered', 'case.expired', 'invoice.issued'] as const;
+export const EVENT_TYPES = [
+  'case.delivered',
+  'case.expired',
+  'case.rejected',
+  'invoice.issued',
+] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
 const MAX_WEBHOOKS_PER_ORG = 5;

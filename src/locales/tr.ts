@@ -240,8 +240,8 @@ export const tr: Catalog = {
       'Bu kuruluşun 25 anahtarı var. Önce birini iptal edin.',
 
     // Webhooks
-    'We call your address when a vehicle reaches custody, a case expires or an invoice is issued. Each call is signed: check the <0/> header with the secret.':
-      'Bir araç yedieminde teslim alındığında, bir dosyanın süresi dolduğunda ya da fatura kesildiğinde adresinizi çağırırız. Her çağrı imzalıdır: <0/> başlığını gizli anahtarla doğrulayın.',
+    'We call your address when a vehicle reaches custody, a case expires, 2earl rejects a case it couldn’t identify, or an invoice is issued. Each call is signed: check the <0/> header with the secret.':
+      'Bir araç yedieminde teslim alındığında, bir dosyanın süresi dolduğunda, 2earl kimliğini doğrulayamadığı bir dosyayı reddettiğinde ya da fatura kesildiğinde adresinizi çağırırız. Her çağrı imzalıdır: <0/> başlığını gizli anahtarla doğrulayın.',
     'Copy the signing secret now. It won’t be shown again.':
       'İmza anahtarını şimdi kopyalayın. Bir daha gösterilmeyecek.',
     Events: 'Olaylar',

@@ -486,7 +486,7 @@ export function webhooksPage(
     'Webhooks',
     { ...nav, current: 'webhooks' },
     `<h1>Webhooks</h1>
-     <p class="lede">We call your address when a vehicle reaches custody, a case expires or an invoice is issued. Each call is signed: check the <code translate="no">Emanet-Signature</code> header with the secret.</p>
+     <p class="lede">We call your address when a vehicle reaches custody, a case expires, 2earl rejects a case it couldn’t identify, or an invoice is issued. Each call is signed: check the <code translate="no">Emanet-Signature</code> header with the secret.</p>
      ${error ? `<p class="error">${esc(error)}</p>` : ''}
      ${created ? `<div class="notice"><p>Copy the signing secret now. It won’t be shown again.</p><code class="secret" translate="no">${esc(created.secret)}</code></div>` : ''}
      ${rows}
