@@ -1,15 +1,17 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "emanet-kurumsal",
+  // The 2earl Cloudflare account. An identifier, not a credential; deploys need only the token.
+  "account_id": "304c2b77d734c688c8309d5a535f561a",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   // Webhook deliveries go only to public addresses; the language engine uses AsyncLocalStorage.
   "compatibility_flags": ["global_fetch_strictly_public", "nodejs_als"],
 
-  // Served at https://emanet-kurumsal.2earl.com (custom domain, created on deploy).
+  // Served at https://emanet-kurumsal.2earl.com: the custom domain is 2earl/emanet-core's
+  // infra/worker.tf, attached once this Worker exists.
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [{ "pattern": "emanet-kurumsal.2earl.com", "custom_domain": true }],
 
   // Invocation logs could record case data.
   "observability": {
