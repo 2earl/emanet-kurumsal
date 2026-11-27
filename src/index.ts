@@ -1,7 +1,7 @@
 import { createApp } from './app';
 import { enqueueEvents, sendDue } from './webhooks';
 
-/** Emanet Kurumsal at emanet-kurumsal.2earl.com (docs/DESIGN.md §5). */
+/** Emanet Kurumsal at kurumsal.emanet.dev (docs/DESIGN.md §5). */
 
 const now = () => Math.floor(Date.now() / 1000);
 const app = createApp(now);

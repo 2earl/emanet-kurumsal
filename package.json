@@ -2,7 +2,7 @@
   "name": "@2earl/emanet-kurumsal",
   "version": "0.0.0",
   "private": true,
-  "description": "Emanet Kurumsal at emanet-kurumsal.2earl.com: creditors add the vehicles they may have taken, follow their cases and receive webhooks. Signed in with 2earl.",
+  "description": "Emanet Kurumsal at kurumsal.emanet.dev: creditors add the vehicles they may have taken, follow their cases and receive webhooks. Signed in with 2earl.",
   "license": "UNLICENSED",
   "type": "module",
   "packageManager": "pnpm@10.28.0",

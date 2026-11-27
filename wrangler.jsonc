@@ -8,7 +8,7 @@
   // Webhook deliveries go only to public addresses; the language engine uses AsyncLocalStorage.
   "compatibility_flags": ["global_fetch_strictly_public", "nodejs_als"],
 
-  // Served at https://emanet-kurumsal.2earl.com: the custom domain is 2earl/emanet-core's
+  // Served at https://kurumsal.emanet.dev: the custom domain is 2earl/emanet-core's
   // infra/worker.tf, attached once this Worker exists.
   "workers_dev": false,
   "preview_urls": false,
@@ -19,7 +19,7 @@
   },
 
   "vars": {
-    "SITE_ORIGIN": "https://emanet-kurumsal.2earl.com",
+    "SITE_ORIGIN": "https://kurumsal.emanet.dev",
     "AUTHORIZATION_SERVER": "https://login.2earl.com",
   },
 

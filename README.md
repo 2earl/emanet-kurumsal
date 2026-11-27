@@ -1,6 +1,6 @@
 # Emanet Kurumsal
 
-Emanet for creditors at **emanet-kurumsal.2earl.com**. Banks, asset management companies and
+Emanet for creditors at **kurumsal.emanet.dev**. Banks, asset management companies and
 their law firms add the vehicles their enforcement files allow them to take, follow each case,
 and are told when a vehicle reaches a custodian car park.
 

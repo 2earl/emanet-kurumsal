@@ -57,7 +57,7 @@ export function invitation(
     wrong_address: `<p class="error">You’re signed in with an account that doesn’t use ${who}. Sign out and sign in with that address, or add it to your account at login.2earl.com.</p>
       <form method="post" action="/signout"><button class="secondary" type="submit">Sign out</button></form>`,
     ready: `<form method="post" class="actions"><button type="submit">Start</button></form>`,
-    taken: `<p class="error">Another account has already started this invitation. Ask the person who did to finish it, or write to legal@2earl.com.</p>`,
+    taken: `<p class="error">Another account has already started this invitation. Ask the person who did to finish it, or write to iletisim@emanet.dev.</p>`,
   }[state];
   return layout(
     'Invitation',
@@ -128,7 +128,7 @@ export function overview(nav: Nav, o: Onboarding, message: string | null): strin
     rejected: `<p class="error">2earl couldn’t approve this application: ${data(o.decision_reason ?? '')}</p>`,
     cancelled: '<p class="error">2earl cancelled this invitation.</p>',
     expired:
-      '<p class="error">This invitation has expired. Ask 2earl for a new link at legal@2earl.com.</p>',
+      '<p class="error">This invitation has expired. Ask 2earl for a new link at iletisim@emanet.dev.</p>',
   }[o.status];
   return layout(
     'Joining Emanet',
@@ -337,7 +337,7 @@ export function agreementStep(
 export const ERROR_TEXT: Record<string, string> = {
   not_found:
     'This invitation link doesn’t work. It may have been replaced by a newer one; use the link in the latest email from 2earl.',
-  expired: 'This invitation has expired. Ask 2earl for a new link at legal@2earl.com.',
+  expired: 'This invitation has expired. Ask 2earl for a new link at iletisim@emanet.dev.',
   claimed_by_another: 'Another account has already started this invitation.',
   not_editable: 'This step can’t be changed any more.',
   invalid_org: 'Choose an organization.',
@@ -347,7 +347,7 @@ export const ERROR_TEXT: Record<string, string> = {
   invalid_name: 'Enter a name for the organization.',
   full: 'Your account is in as many organizations as it can be. Leave one at login.2earl.com.',
   wrong_address: 'Your account doesn’t use the address the invitation went to.',
-  not_staff: 'This invitation can’t create an organization. Write to legal@2earl.com.',
+  not_staff: 'This invitation can’t create an organization. Write to iletisim@emanet.dev.',
   no_account: 'Your account isn’t active.',
   details_missing: 'Give the company’s details first.',
   org_missing: 'Link your organization first.',

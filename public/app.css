@@ -72,6 +72,27 @@ a {
   flex-wrap: wrap;
 }
 
+/* On a phone the sections stay on one line that scrolls sideways, under the brand. */
+@media (max-width: 40rem) {
+  .bar {
+    gap: 0.5rem 1rem;
+  }
+
+  .bar nav {
+    order: 3;
+    flex: 1 0 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+
+  .bar nav a {
+    white-space: nowrap;
+    padding: 0.35rem 0;
+  }
+}
+
 .bar nav a {
   text-decoration: none;
   color: var(--muted);
@@ -527,4 +548,78 @@ ol.timeline time {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   min-width: 11rem;
+}
+
+/* Keyboard users can jump past the header. */
+.skip {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  background: var(--paper);
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--focus);
+  z-index: 10;
+}
+
+.skip:focus {
+  top: 0.5rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* API keys and webhooks: two pages of one section. */
+nav.tabs {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 1.5rem;
+}
+
+nav.tabs a {
+  padding: 0.5rem 0;
+  text-decoration: none;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+nav.tabs a[aria-current='page'] {
+  color: var(--ink);
+  border-bottom-color: var(--action);
+  font-weight: 600;
+}
+
+.panel.empty h2 {
+  margin-top: 0;
+}
+
+@media (max-width: 40rem) {
+  .counts {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .counts a,
+  .counts div {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .counts strong {
+    font-size: 1.2rem;
+  }
+
+  .counts span {
+    font-size: 0.8rem;
+  }
+
+  .bar .who {
+    font-size: 0.9rem;
+  }
 }

@@ -6,7 +6,7 @@ import type {
   Report,
   TimelineEvent,
 } from './core';
-import { data, day, esc, layout, lira, plate, type Nav } from './pages';
+import { data, day, esc, layout, lira, moment, plate, type Nav } from './pages';
 
 /**
  * A partner's view of what happened (docs/DESIGN.md §5): a case's timeline and custody
@@ -30,9 +30,6 @@ export const DOCUMENT_LABEL: Record<CaseDocumentKind, string> = {
   yediemin_vehicle: 'Vehicle at the custodian',
   scene: 'Where it was found',
 };
-
-const moment = (unix: number) =>
-  `<time translate="no">${new Date(unix * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC</time>`;
 
 /** The timeline and, once delivered, the documents: shown on a case's page. */
 export function caseExtras(

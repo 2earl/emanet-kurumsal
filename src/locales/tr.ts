@@ -57,8 +57,8 @@ export const tr: Catalog = {
 
     // Organizations
     'No organization yet': 'Henüz kuruluş yok',
-    'Your account isn’t part of an organization that uses Emanet. Ask your organization’s administrator for an invitation, or write to legal@2earl.com.':
-      'Hesabınız Emanet kullanan bir kuruluşa bağlı değil. Kuruluşunuzun yöneticisinden davet isteyin ya da legal@2earl.com adresine yazın.',
+    'Your account isn’t part of an organization that uses Emanet. Ask your organization’s administrator for an invitation, or write to iletisim@emanet.dev.':
+      'Hesabınız Emanet kullanan bir kuruluşa bağlı değil. Kuruluşunuzun yöneticisinden davet isteyin ya da iletisim@emanet.dev adresine yazın.',
     'Choose an organization': 'Bir kuruluş seçin',
     'Not active yet': 'Henüz etkin değil',
     '2earl hasn’t activated this organization in Emanet yet.':
@@ -331,8 +331,8 @@ export const tr: Catalog = {
     'You’re signed in with an account that doesn’t use <0/>. Sign out and sign in with that address, or add it to your account at login.2earl.com.':
       '<0/> adresini kullanmayan bir hesapla giriş yaptınız. Çıkış yapıp o adresle giriş yapın veya adresi login.2earl.com’da hesabınıza ekleyin.',
     Start: 'Başla',
-    'Another account has already started this invitation. Ask the person who did to finish it, or write to legal@2earl.com.':
-      'Bu daveti başka bir hesap başlattı. Başlatan kişiden tamamlamasını isteyin veya legal@2earl.com adresine yazın.',
+    'Another account has already started this invitation. Ask the person who did to finish it, or write to iletisim@emanet.dev.':
+      'Bu daveti başka bir hesap başlattı. Başlatan kişiden tamamlamasını isteyin veya iletisim@emanet.dev adresine yazın.',
     Company: 'Şirket',
     Organization: 'Kuruluş',
     'Company details': 'Şirket bilgileri',
@@ -347,8 +347,8 @@ export const tr: Catalog = {
     'Go to <0/>': '<0/> sayfasına git',
     '2earl couldn’t approve this application: <0/>': '2earl bu başvuruyu onaylayamadı: <0/>',
     '2earl cancelled this invitation.': '2earl bu daveti iptal etti.',
-    'This invitation has expired. Ask 2earl for a new link at legal@2earl.com.':
-      'Bu davetin süresi doldu. legal@2earl.com adresinden 2earl’den yeni bir bağlantı isteyin.',
+    'This invitation has expired. Ask 2earl for a new link at iletisim@emanet.dev.':
+      'Bu davetin süresi doldu. iletisim@emanet.dev adresinden 2earl’den yeni bir bağlantı isteyin.',
     Continue: 'Devam et',
     'Download the accepted agreement': 'Onaylanan sözleşmeyi indir',
     'Complete the steps by <0/>.': 'Adımları <0/> tarihine kadar tamamlayın.',
@@ -441,8 +441,8 @@ export const tr: Catalog = {
       'Hesabınız olabileceği en fazla sayıda kuruluşta. login.2earl.com’da birinden ayrılın.',
     'Your account doesn’t use the address the invitation went to.':
       'Hesabınız davetin gönderildiği adresi kullanmıyor.',
-    'This invitation can’t create an organization. Write to legal@2earl.com.':
-      'Bu davetle kuruluş oluşturulamıyor. legal@2earl.com adresine yazın.',
+    'This invitation can’t create an organization. Write to iletisim@emanet.dev.':
+      'Bu davetle kuruluş oluşturulamıyor. iletisim@emanet.dev adresine yazın.',
     'Your account isn’t active.': 'Hesabınız etkin değil.',
     'Give the company’s details first.': 'Önce şirket bilgilerini girin.',
     'Link your organization first.': 'Önce kuruluşunuzu bağlayın.',
@@ -532,5 +532,28 @@ export const tr: Catalog = {
     'A case’s states and times': 'Bir dosyanın durumları ve zamanları',
     'Your invoices': 'Faturalarınız',
     'An invoice with its cases': 'Dosyalarıyla birlikte bir fatura',
+
+    // emanet.dev, the overview
+    Contact: 'İletişim',
+    Cookies: 'Çerezler',
+    Integrations: 'Entegrasyon',
+    'New to Emanet? <0>See how it works</0>, or write to <1>iletisim@emanet.dev</1>.':
+      'Emanet’i yeni mi tanıyorsunuz? <0>Nasıl çalıştığına bakın</0> ya da <1>iletisim@emanet.dev</1> adresine yazın.',
+    'See how it works': 'Nasıl çalıştığına bakın',
+    'Privacy notice': 'Gizlilik',
+    'Skip to content': 'İçeriğe geç',
+    'Terms of use': 'Kullanım şartları',
+    'format: 2026/12345': 'biçim: 2026/12345',
+    'Expiring within three days': 'Üç gün içinde süresi dolacaklar',
+    'Agents stop looking when a case expires. Confirm the ones whose seizure order still stands.':
+      'Süresi dolan dosyada saha görevlileri aramayı bırakır. Yakalama şerhi hâlâ geçerli olanları onaylayın.',
+    Choose: 'Seç',
+    'Confirm the chosen cases': 'Seçilen dosyaları onayla',
+    'No vehicles yet': 'Henüz araç yok',
+    'Add your first vehicle with the form, upload a CSV file, or connect your systems with the <0>API</0>.':
+      'İlk aracınızı formla ekleyin, bir CSV dosyası yükleyin ya da sistemlerinizi <0>API</0> ile bağlayın.',
+    'Confirmed one case.': 'Bir dosya onaylandı.',
+    'Confirmed {0} cases.': '{0} dosya onaylandı.',
+    'Not confirmed': 'Onaylanmadı',
   },
 };

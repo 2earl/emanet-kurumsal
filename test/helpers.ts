@@ -1,6 +1,6 @@
 import { env, exports } from 'cloudflare:workers';
 
-export const ORIGIN = 'https://emanet-kurumsal.2earl.com';
+export const ORIGIN = 'https://kurumsal.emanet.dev';
 const ip = () => `198.51.100.${String(Math.floor(Math.random() * 250))}`;
 
 export function request(

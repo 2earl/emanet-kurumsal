@@ -301,13 +301,45 @@ export function createApp(now: () => number) {
     );
 
   app.get('/o/:org', async (c) => {
-    const [counts, recent] = await Promise.all([
+    const [counts, recent, active] = await Promise.all([
       core(c.env).counts(org(c).orgId),
       core(c.env).listCases(org(c).orgId, { limit: 10 }),
+      core(c.env).listCases(org(c).orgId, { status: 'active', limit: 200 }),
     ]);
-    if (!counts.ok || !recent.ok) throw new Error('core unavailable');
+    if (!counts.ok || !recent.ok || !active.ok) throw new Error('core unavailable');
+    const soon = c.get('now') + 3 * 86_400;
+    const expiring = active.value.cases
+      .filter((x) => x.expires_at <= soon)
+      .sort((a, b) => a.expires_at - b.expires_at)
+      .slice(0, 50);
+    const confirmed = Number(c.req.query('confirmed'));
     // Most recent first on the overview.
-    return c.html(pages.dashboard(nav(c), counts.value, [...recent.value.cases].reverse()));
+    return c.html(
+      pages.dashboard(
+        nav(c),
+        counts.value,
+        [...recent.value.cases].reverse(),
+        expiring,
+        can.writeCases(org(c).role),
+        Number.isInteger(confirmed) && confirmed > 0
+          ? confirmed === 1
+            ? 'Confirmed one case.'
+            : `Confirmed ${String(confirmed)} cases.`
+          : null,
+      ),
+    );
+  });
+
+  // Several cases confirmed at once, from the overview.
+  app.post('/o/:org/cases/confirm', async (c) => {
+    if (!can.writeCases(org(c).role)) return forbidden(c);
+    const form = await c.req.parseBody({ all: true });
+    const ids = list(form.case_ids).slice(0, 200);
+    if (ids.length === 0) return c.redirect(`/o/${org(c).orgId}`, 303);
+    const result = await core(c.env).confirmCases(org(c).orgId, uid(c), ids);
+    if (!result.ok)
+      return c.html(pages.problem(nav(c), 'Not confirmed', errorText(result.error)), 422);
+    return c.redirect(`/o/${org(c).orgId}?confirmed=${String(result.value.confirmed)}`, 303);
   });
 
   app.get('/o/:org/cases', async (c) => {
