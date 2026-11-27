@@ -317,5 +317,162 @@ export const tr: Catalog = {
     'Not signed in': 'Giriş yapılmadı',
     'Sign-in was cancelled or not allowed.': 'Giriş iptal edildi ya da izin verilmedi.',
     'Sign-in didn’t complete. Start again.': 'Giriş tamamlanmadı. Yeniden başlayın.',
+
+    // Joining Emanet (onboarding)
+    'Joining Emanet': 'Emanet’e katılım',
+    Invitation: 'Davet',
+    '<0/> is invited to Emanet': '<0/> Emanet’e davet edildi',
+    '2earl invites you to set up <0/> on Emanet. It takes four steps: your organization, the company’s details, a few documents, and the agreement. 2earl then checks everything and activates your account.':
+      '2earl sizi <0/> için Emanet hesabını kurmaya davet ediyor. Dört adım var: kuruluşunuz, şirket bilgileri, birkaç belge ve sözleşme. Ardından 2earl her şeyi kontrol edip hesabınızı etkinleştirir.',
+    Invited: 'Davet edilen',
+    'Link valid until': 'Bağlantının son geçerlilik tarihi',
+    'Sign in, or create your 2earl account, with the address the invitation went to: <0/>.':
+      'Davetin gönderildiği adresle giriş yapın veya 2earl hesabı oluşturun: <0/>.',
+    'You’re signed in with an account that doesn’t use <0/>. Sign out and sign in with that address, or add it to your account at login.2earl.com.':
+      '<0/> adresini kullanmayan bir hesapla giriş yaptınız. Çıkış yapıp o adresle giriş yapın veya adresi login.2earl.com’da hesabınıza ekleyin.',
+    Start: 'Başla',
+    'Another account has already started this invitation. Ask the person who did to finish it, or write to legal@2earl.com.':
+      'Bu daveti başka bir hesap başlattı. Başlatan kişiden tamamlamasını isteyin veya legal@2earl.com adresine yazın.',
+    Company: 'Şirket',
+    Organization: 'Kuruluş',
+    'Company details': 'Şirket bilgileri',
+    Documents: 'Belgeler',
+    Agreement: 'Sözleşme',
+    Done: 'Tamam',
+    'To do': 'Yapılacak',
+    '2earl asked for a change: <0/>': '2earl bir düzeltme istedi: <0/>',
+    'You accepted the agreement on <0/>. 2earl is checking your details and documents and will email you when <1/> is active.':
+      'Sözleşmeyi <0/> tarihinde onayladınız. 2earl bilgilerinizi ve belgelerinizi inceliyor; <1/> etkinleştiğinde size e-posta gönderecek.',
+    '<0/> is active.': '<0/> etkin.',
+    'Go to <0/>': '<0/> sayfasına git',
+    '2earl couldn’t approve this application: <0/>': '2earl bu başvuruyu onaylayamadı: <0/>',
+    '2earl cancelled this invitation.': '2earl bu daveti iptal etti.',
+    'This invitation has expired. Ask 2earl for a new link at legal@2earl.com.':
+      'Bu davetin süresi doldu. legal@2earl.com adresinden 2earl’den yeni bir bağlantı isteyin.',
+    Continue: 'Devam et',
+    'Download the accepted agreement': 'Onaylanan sözleşmeyi indir',
+    'Complete the steps by <0/>.': 'Adımları <0/> tarihine kadar tamamlayın.',
+    'Thank you. 2earl has been told.': 'Teşekkürler. 2earl’e bildirildi.',
+    'Use an organization you already manage': 'Yönettiğiniz bir kuruluşu kullanın',
+    'Use this organization': 'Bu kuruluşu kullan',
+    'Your organization': 'Kuruluşunuz',
+    'Your colleagues sign in to Emanet as members of the company’s 2earl organization. You’ll be its owner and can invite them, give roles and require two-step sign-in, at login.2earl.com.':
+      'İş arkadaşlarınız Emanet’e şirketin 2earl kuruluşunun üyeleri olarak giriş yapar. Kuruluşun sahibi siz olursunuz; login.2earl.com’da onları davet edebilir, rol verebilir ve iki adımlı girişi zorunlu kılabilirsiniz.',
+    'Linked: <0/>': 'Bağlandı: <0/>',
+    'An organization is linked.': 'Bir kuruluş bağlandı.',
+    'Create the company’s organization': 'Şirketin kuruluşunu oluşturun',
+    'Organization name': 'Kuruluş adı',
+    'Create organization': 'Kuruluş oluştur',
+    'As on your trade registry and tax records. They go into the agreement and onto 2earl’s invoices.':
+      'Ticaret sicili ve vergi kayıtlarınızdaki gibi. Bu bilgiler sözleşmeye ve 2earl’ün faturalarına girer.',
+    'Legal name': 'Ticaret unvanı',
+    'e.g. Örnek Bankası A.Ş.': 'ör. Örnek Bankası A.Ş.',
+    'Tax number (VKN)': 'Vergi kimlik numarası (VKN)',
+    'Tax office': 'Vergi dairesi',
+    'MERSİS number': 'MERSİS numarası',
+    optional: 'isteğe bağlı',
+    'KEP address': 'KEP adresi',
+    'optional; for formal notices': 'isteğe bağlı; resmî bildirimler için',
+    'Registered address': 'Kayıtlı adres',
+    'The company is registered for e-invoice (e-Fatura)': 'Şirket e-Fatura mükellefidir',
+    'Who signs': 'İmza yetkilisi',
+    'Full name': 'Adı soyadı',
+    'as on the signature circular': 'imza sirkülerindeki gibi',
+    Title: 'Unvanı',
+    Contacts: 'İletişim',
+    'Invoices to': 'Fatura adresi',
+    'Operations contact': 'Operasyon sorumlusu',
+    'Operations email': 'Operasyon e-postası',
+    'Operations phone': 'Operasyon telefonu',
+    'Save and continue': 'Kaydet ve devam et',
+    '2earl needs the signature circular (imza sirküleri) of the person who signs and the company’s tax certificate (vergi levhası). Add the Trade Registry Gazette if the signatory’s authority is there. PDF, JPEG or PNG, up to 10 MB each.':
+      '2earl’ün imza yetkilisinin imza sirkülerine ve şirketin vergi levhasına ihtiyacı var. İmza yetkisi Ticaret Sicili Gazetesi’nde yer alıyorsa onu da ekleyin. PDF, JPEG veya PNG; her biri en fazla 10 MB.',
+    'Still needed:': 'Eksik olanlar:',
+    Document: 'Belge',
+    File: 'Dosya',
+    Added: 'Eklenme',
+    'No documents yet.': 'Henüz belge yok.',
+    Upload: 'Yükle',
+    'Continue to the agreement': 'Sözleşmeye geç',
+    'Signature circular': 'İmza sirküleri',
+    'Tax certificate': 'Vergi levhası',
+    'Trade Registry Gazette': 'Ticaret Sicili Gazetesi',
+    'Wet-signed agreement': 'Islak imzalı sözleşme',
+    'Other document': 'Diğer belge',
+    'In progress': 'Devam ediyor',
+    'Waiting for 2earl': '2earl’ün onayı bekleniyor',
+    Active: 'Etkin',
+    'Not approved': 'Onaylanmadı',
+    Cancelled: 'İptal edildi',
+    'Your fees (Annex 2)': 'Ücretleriniz (Ek-2)',
+    'Any vehicle': 'Tüm araçlar',
+    'Charged only for vehicles delivered to a custodian car park, plus VAT.':
+      'Yalnızca yediemin otoparkına teslim edilen araçlar için, KDV hariç ücretlendirilir.',
+    'Version <0/> · SHA-256 <1/>. The agreement is in Turkish, the language that governs it.':
+      'Sürüm <0/> · SHA-256 <1/>. Sözleşme, bağlayıcı dili olan Türkçedir.',
+    'Your full name': 'Adınız soyadınız',
+    'Your title': 'Unvanınız',
+    'I am authorised to bind <0/>, as shown by the signature circular I uploaded.':
+      'Yüklediğim imza sirkülerinde görüldüğü üzere <0/> adına bağlayıcı işlem yapmaya yetkiliyim.',
+    'I have read the agreement and its annexes and accept them for the company.':
+      'Sözleşmeyi ve eklerini okudum; şirket adına kabul ediyorum.',
+    'Accept the agreement': 'Sözleşmeyi onayla',
+    'To accept, confirm it’s you with your second sign-in step.':
+      'Onaylamak için ikinci giriş adımıyla kimliğinizi doğrulayın.',
+    'Confirm and continue': 'Doğrula ve devam et',
+    'The Emanet service agreement': 'Emanet Hizmet Sözleşmesi',
+    'Link your organization and give the company’s details first: the agreement is written with them.':
+      'Önce kuruluşunuzu bağlayın ve şirket bilgilerini girin: sözleşme bu bilgilerle hazırlanır.',
+    'Accepted by <0/> (<1/>) on <2/>.': '<2/> tarihinde <0/> (<1/>) tarafından onaylandı.',
+    'Read it through, with the fees in Annex 2. Accepting here is a binding electronic acceptance; 2earl keeps the exact text, your name, title, time and IP address. If the company also wants a wet-signed copy, download the text, sign it and upload it as a document.':
+      'Ek-2’deki ücretlerle birlikte baştan sona okuyun. Buradaki onay bağlayıcı bir elektronik kabuldür; 2earl metnin aynısını, adınızı, unvanınızı, zamanı ve IP adresinizi saklar. Şirket ayrıca ıslak imzalı bir nüsha isterse metni indirip imzalayın ve belge olarak yükleyin.',
+    'This invitation link doesn’t work. It may have been replaced by a newer one; use the link in the latest email from 2earl.':
+      'Bu davet bağlantısı çalışmıyor. Yerine daha yeni bir bağlantı gönderilmiş olabilir; 2earl’den gelen son e-postadaki bağlantıyı kullanın.',
+    'Another account has already started this invitation.': 'Bu daveti başka bir hesap başlattı.',
+    'This step can’t be changed any more.': 'Bu adım artık değiştirilemez.',
+    'Choose an organization.': 'Bir kuruluş seçin.',
+    'That organization is already used by another company’s application.':
+      'Bu kuruluş başka bir şirketin başvurusunda kullanılıyor.',
+    'That organization already uses Emanet.': 'Bu kuruluş zaten Emanet’i kullanıyor.',
+    'A field isn’t valid. Check it and try again.':
+      'Bir alan geçersiz. Kontrol edip yeniden deneyin.',
+    'Enter a name for the organization.': 'Kuruluş için bir ad girin.',
+    'Your account is in as many organizations as it can be. Leave one at login.2earl.com.':
+      'Hesabınız olabileceği en fazla sayıda kuruluşta. login.2earl.com’da birinden ayrılın.',
+    'Your account doesn’t use the address the invitation went to.':
+      'Hesabınız davetin gönderildiği adresi kullanmıyor.',
+    'This invitation can’t create an organization. Write to legal@2earl.com.':
+      'Bu davetle kuruluş oluşturulamıyor. legal@2earl.com adresine yazın.',
+    'Your account isn’t active.': 'Hesabınız etkin değil.',
+    'Give the company’s details first.': 'Önce şirket bilgilerini girin.',
+    'Link your organization first.': 'Önce kuruluşunuzu bağlayın.',
+    'The agreement changed since you opened it (for example, the details were edited). Read it again and accept.':
+      'Sözleşme siz açtıktan sonra değişti (örneğin bilgiler düzenlendi). Yeniden okuyup onaylayın.',
+    'Confirm that you may bind the company.':
+      'Şirket adına bağlayıcı işlem yapmaya yetkili olduğunuzu onaylayın.',
+    'Enter your full name and title.': 'Adınızı soyadınızı ve unvanınızı girin.',
+    'That’s as many documents as an application can have.':
+      'Bir başvuruya eklenebilecek en fazla belge sayısına ulaşıldı.',
+    'Upload a PDF, JPEG or PNG.': 'PDF, JPEG veya PNG yükleyin.',
+    'The file is larger than 10 MB.': 'Dosya 10 MB’tan büyük.',
+    'Choose a file.': 'Bir dosya seçin.',
+    'Enter the company’s legal name.': 'Şirketin ticaret unvanını girin.',
+    'Enter the registered address.': 'Kayıtlı adresi girin.',
+    'Enter the tax office.': 'Vergi dairesini girin.',
+    'The tax number has 10 digits (11 for a person).':
+      'Vergi kimlik numarası 10 hanelidir (şahıslar için 11).',
+    'The MERSİS number has 16 digits.': 'MERSİS numarası 16 hanelidir.',
+    'The KEP address isn’t an email address.': 'KEP adresi geçerli bir e-posta adresi değil.',
+    'Enter the signatory’s first and last name.': 'İmza yetkilisinin adını ve soyadını girin.',
+    'Enter the signatory’s title.': 'İmza yetkilisinin unvanını girin.',
+    'The invoice address isn’t an email address.':
+      'Fatura adresi geçerli bir e-posta adresi değil.',
+    'Enter the operations contact’s name.': 'Operasyon sorumlusunun adını girin.',
+    'The operations email isn’t an email address.':
+      'Operasyon e-postası geçerli bir e-posta adresi değil.',
+    'Enter a phone number with its area code.': 'Alan koduyla birlikte bir telefon numarası girin.',
+    'That didn’t work. Try again.': 'Bu işlem olmadı. Yeniden deneyin.',
+    'This application doesn’t exist.': 'Bu başvuru yok.',
+    'There is no text yet.': 'Henüz metin yok.',
   },
 };

@@ -18,7 +18,7 @@ export function esc(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-const data = (value: string) => `<span translate="no">${esc(value)}</span>`;
+export const data = (value: string) => `<span translate="no">${esc(value)}</span>`;
 
 const MARK =
   '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">' +
@@ -55,12 +55,12 @@ export const status = (value: CaseStatus) =>
 export const lira = (kurus: number) =>
   `<span translate="no">₺${(kurus / 100).toLocaleString(currentLocale() === 'tr' ? 'tr-TR' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
 
-const day = (unix: number | null) =>
+export const day = (unix: number | null) =>
   unix === null
     ? '—'
     : `<time translate="no">${new Date(unix * 1000).toISOString().slice(0, 10)}</time>`;
 
-function layout(title: string, nav: Nav, body: string): string {
+export function layout(title: string, nav: Nav, body: string): string {
   const org = nav.org;
   const link = (key: NonNullable<Nav['current']>, href: string, label: string) =>
     `<a href="${href}"${nav.current === key ? ' aria-current="page"' : ''}>${label}</a>`;

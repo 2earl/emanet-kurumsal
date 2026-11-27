@@ -46,6 +46,7 @@ import {
   withLocale,
 } from './i18n';
 import { KeyError, createKey, listKeys, revokeKey } from './keys';
+import { registerOnboarding } from './onboarding';
 import * as pages from './pages';
 import {
   WebhookError,
@@ -167,6 +168,13 @@ export function createApp(now: () => number) {
     }
     const only = partners[0];
     if (partners.length === 1 && only) return c.redirect(`/o/${only.orgId}`, 302);
+    // Someone still joining Emanet continues where they left off.
+    if (partners.length === 0) {
+      const joining = await core(c.env).myOnboardings(session.uid);
+      if (joining.ok && joining.value.some((o) => o.status !== 'approved')) {
+        return c.redirect('/onboarding', 302);
+      }
+    }
     return c.html(pages.orgPicker(partners));
   });
 
@@ -618,6 +626,8 @@ export function createApp(now: () => number) {
     await enableWebhook(c.env, org(c).orgId, c.req.param('id'));
     return c.redirect(`/o/${org(c).orgId}/webhooks`, 303);
   });
+
+  registerOnboarding(app, nav);
 
   // Static files (styles, icon); anything else is not found.
   app.get('*', async (c) => {

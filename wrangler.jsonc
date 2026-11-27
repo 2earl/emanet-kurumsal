@@ -44,6 +44,8 @@
     { "binding": "AUTH_SERVER", "service": "login" },
     // Which organizations a person belongs to, and their role in each (login DESIGN §4.14).
     { "binding": "ORGS", "service": "login", "entrypoint": "OrganizationDirectory" },
+    // Creates an invited company's organization (docs/DESIGN.md §5, Onboarding).
+    { "binding": "ORG_PROVISIONING", "service": "login", "entrypoint": "OrganizationProvisioning" },
     // Emanet's data and rules: this app may only do what a creditor may (emanet-core).
     { "binding": "CORE", "service": "emanet-core", "entrypoint": "PartnerApi" },
   ],
@@ -60,6 +62,11 @@
       "namespace_id": "2002",
       "simple": { "limit": 300, "period": 60 },
     },
+  ],
+
+  // Onboarding documents (signature circular, tax certificate, ...), in the EU like the rest.
+  "r2_buckets": [
+    { "binding": "DOCUMENTS", "bucket_name": "emanet-documents", "jurisdiction": "eu" },
   ],
 
   "d1_databases": [

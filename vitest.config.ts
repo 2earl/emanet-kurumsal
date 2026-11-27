@@ -22,12 +22,27 @@ const MEMBERS = {
   'outsider': [],
 };
 const base = (uid) => uid.split('!')[0];
+// Accounts joining Emanet, by the address they sign in with; organizations created for them.
+const ADDRESSES = { 'joiner-1': 'ops@bank.example', 'joiner-2': 'ops2@bank.example', 'owner-1': 'owner@bank.example' };
+const created = [];
+const members = (uid) => [...(MEMBERS[base(uid)] ?? []), ...created.filter(([u]) => u === base(uid)).map(([, o, n]) => [o, n, 'owner'])];
 export class OrganizationDirectory extends WorkerEntrypoint {
   async membershipsOf(uid) {
-    return (MEMBERS[base(uid)] ?? []).map(([orgId, name, role]) => ({ orgId, name, role }));
+    return members(uid).map(([orgId, name, role]) => ({ orgId, name, role }));
   }
   async roleOf(orgId, uid) {
-    return (MEMBERS[base(uid)] ?? []).find(([o]) => o === orgId)?.[2] ?? null;
+    return members(uid).find(([o]) => o === orgId)?.[2] ?? null;
+  }
+}
+export class OrganizationProvisioning extends WorkerEntrypoint {
+  async hasAddress(uid, email) { return ADDRESSES[base(uid)] === email.toLowerCase(); }
+  async create(r) {
+    if (ADDRESSES[base(r.ownerId)] !== r.email) return { ok: false, reason: 'wrong_address' };
+    if (r.invitedBy !== 'staff-1') return { ok: false, reason: 'not_staff' };
+    if (!r.name.trim()) return { ok: false, reason: 'invalid_name' };
+    const orgId = 'org_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+    created.push([base(r.ownerId), orgId, r.name.trim()]);
+    return { ok: true, orgId };
   }
 }
 export default class extends WorkerEntrypoint {
@@ -130,7 +145,86 @@ export class PartnerApi extends WorkerEntrypoint {
     return id;
   }
   async testReset() { cases.clear(); events.length = 0; }
+
+  // Onboarding, as src/core.ts describes it; a token is 43 characters.
+  async testInvite(email) {
+    const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '').slice(0, 43);
+    const id = crypto.randomUUID();
+    onboardings.set(id, { id, token, kind: 'bank', company: 'Örnek Bank', contact_name: 'Ayşe Yılmaz',
+      contact_email: email, locale: 'tr', price_list: { default_kurus: 1500000, rules: [{ make: 'Ford', fee_kurus: 2000000 }] },
+      reconfirm_days: 14, status: 'invited', invited_by: 'staff-1', expires_at: now() + 14 * 86400,
+      claimed_by: null, org_id: null, details: null, contract_version: null, contract_sha256: null,
+      contract_text: null, signer_name: null, signer_title: null, signed_at: null, decision_reason: null,
+      partner_id: null, documents: [] });
+    return { id, token };
+  }
+  async onboardingInvitation(token) {
+    const o = [...onboardings.values()].find((x) => x.token === token);
+    if (!o || ['approved', 'rejected', 'cancelled', 'expired'].includes(o.status)) return fail('not_found');
+    const { id, company, contact_name, contact_email, locale, invited_by, status, expires_at, claimed_by } = o;
+    return ok({ id, company, contact_name, contact_email, locale, invited_by, status, expires_at, claimed_by });
+  }
+  async claimOnboarding(token, uid) {
+    const o = [...onboardings.values()].find((x) => x.token === token);
+    if (!o) return fail('not_found');
+    if (o.claimed_by && o.claimed_by !== uid) return fail('claimed_by_another');
+    o.claimed_by = uid; if (o.status === 'invited') o.status = 'in_progress';
+    return ok({ id: o.id });
+  }
+  async myOnboardings(uid) {
+    return ok([...onboardings.values()].filter((o) => o.claimed_by === uid).map(({ token, ...o }) => o));
+  }
+  async onboarding(id, uid) {
+    const o = onboardings.get(id);
+    if (!o || o.claimed_by !== uid) return fail('not_found');
+    const { token, ...rest } = o;
+    return ok(rest);
+  }
+  async linkOnboardingOrganization(id, uid, orgId) {
+    const o = onboardings.get(id);
+    if (!o || o.claimed_by !== uid) return fail('not_found');
+    if (o.status !== 'in_progress') return fail('not_editable');
+    if (PARTNERS[orgId]) return fail('partner_exists');
+    o.org_id = orgId; return ok(null);
+  }
+  async saveOnboardingDetails(id, uid, d) {
+    const o = onboardings.get(id);
+    if (!o || o.claimed_by !== uid) return fail('not_found');
+    if (o.status !== 'in_progress') return fail('not_editable');
+    if (!/^\\d{10,11}$/.test(d.vkn)) return fail('invalid_details', 'vkn');
+    o.details = { ...d, mersis: d.mersis || null, kep: d.kep || null }; return ok(o.details);
+  }
+  async addOnboardingDocument(id, uid, doc) {
+    const o = onboardings.get(id);
+    if (!o || o.claimed_by !== uid) return fail('not_found');
+    if (!doc.file_ref.startsWith('onboarding/' + id + '/')) return fail('invalid_ref');
+    const d = { id: crypto.randomUUID(), uploaded_at: now(), ...doc };
+    o.documents.push(d); return ok({ id: d.id });
+  }
+  async onboardingContract(id, uid) {
+    const o = onboardings.get(id);
+    if (!o || o.claimed_by !== uid) return fail('not_found');
+    if (!o.details) return fail('details_missing');
+    const text = 'EMANET HİZMET SÖZLEŞMESİ\\n\\n' + o.details.legalName + ' ' + o.details.vkn;
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    return ok({ version: '2026-11-27-draft', sha256, text,
+      sections: [{ title: 'EMANET HİZMET SÖZLEŞMESİ', paragraphs: [o.details.legalName + ' ' + o.details.vkn] }] });
+  }
+  async signOnboarding(id, uid, input) {
+    const o = onboardings.get(id);
+    if (!o || o.claimed_by !== uid) return fail('not_found');
+    if (!o.org_id) return fail('org_missing');
+    if (!input.authorised) return fail('not_authorised');
+    const c = await this.onboardingContract(id, uid);
+    if (!c.ok) return c;
+    if (input.version !== c.value.version || input.sha256 !== c.value.sha256) return fail('contract_changed');
+    Object.assign(o, { status: 'signed', contract_version: c.value.version, contract_sha256: c.value.sha256,
+      contract_text: c.value.text, signer_name: input.name, signer_title: input.title, signed_at: now(), signer_ip: input.ip });
+    return ok(null);
+  }
 }
+const onboardings = new Map();
 export default { fetch() { return new Response(null, { status: 404 }); } };
 `;
 

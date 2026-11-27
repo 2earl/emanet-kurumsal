@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { collectMissing } from '../src/i18n';
-import { ORIGIN, caseJson, formOf, post, request, signIn } from './helpers';
+import { ORIGIN, caseJson, coreHooks, formOf, post, request, signIn } from './helpers';
 
 /** Every page in Turkish, and nothing left in English (src/locales/tr.ts). */
 
@@ -162,6 +162,109 @@ describe('Turkish', () => {
       .bind(crypto.randomUUID())
       .run();
     await (await request('/o/org-1/webhooks', { headers: { ...tr, Cookie: owner } })).text();
+    expect([...missing].sort()).toEqual([]);
+  });
+
+  it('serves the onboarding pages without an untranslated sentence', async () => {
+    const missing = collectMissing();
+    const get = async (path: string, cookie = '') =>
+      (await request(path, { headers: { ...tr, ...(cookie ? { Cookie: cookie } : {}) } })).text();
+    const send = async (path: string, cookie: string, form: Record<string, string>) =>
+      (
+        await request(path, {
+          method: 'POST',
+          headers: {
+            ...tr,
+            Cookie: cookie,
+            Origin: ORIGIN,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams(form),
+        })
+      ).text();
+    const { id, token } = await coreHooks().testInvite('ops@bank.example');
+    const joiner = await signIn('joiner-1');
+    const other = await signIn('joiner-2');
+    await get(`/join/${token}`);
+    await get(`/join/${token}`, other);
+    await get(`/join/${token}`, joiner);
+    await get('/join/nope');
+    await send(`/join/${token}`, joiner, {});
+    await get(`/join/${token}`, other);
+    await get(`/onboarding/${id}`, joiner);
+    await get(`/onboarding/${id}/org`, joiner);
+    await send(`/onboarding/${id}/org`, joiner, { mode: 'existing', org: 'org-1' });
+    await send(`/onboarding/${id}/org`, joiner, { mode: 'new', name: 'Örnek Bank' });
+    await get(`/onboarding/${id}/org`, joiner);
+    await get(`/onboarding/${id}/details`, joiner);
+    for (const vkn of ['12', '1234567890']) {
+      await send(`/onboarding/${id}/details`, joiner, {
+        legalName: 'Örnek Bank A.Ş.',
+        address: 'Büyükdere Cad. No: 1, İstanbul',
+        taxOffice: 'Şişli',
+        vkn,
+        signatoryName: 'Mehmet Demir',
+        signatoryTitle: 'GMY',
+        billingEmail: 'f@bank.example',
+        operationsName: 'Ayşe Yılmaz',
+        operationsEmail: 'ops@bank.example',
+        operationsPhone: '+902125550000',
+      });
+    }
+    await get(`/onboarding/${id}/documents`, joiner);
+    const bad = new FormData();
+    bad.append('kind', 'tax_certificate');
+    bad.append('file', new File(['nope'], 'x.pdf'));
+    await (
+      await request(`/onboarding/${id}/documents`, {
+        method: 'POST',
+        headers: { ...tr, Cookie: joiner, Origin: ORIGIN },
+        body: bad,
+      })
+    ).text();
+    for (const kind of ['signature_circular', 'tax_certificate']) {
+      const good = new FormData();
+      good.append('kind', kind);
+      good.append('file', new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])], 'x.pdf'));
+      await (
+        await request(`/onboarding/${id}/documents`, {
+          method: 'POST',
+          headers: { ...tr, Cookie: joiner, Origin: ORIGIN },
+          body: good,
+        })
+      ).text();
+    }
+    await get(`/onboarding/${id}/documents`, joiner);
+    await get(`/onboarding/${id}/agreement`, joiner);
+    const aal2 = await signIn('joiner-1!aal2');
+    const form = await get(`/onboarding/${id}/agreement`, aal2);
+    const version = /name="version" value="([^"]+)"/.exec(form)?.[1] ?? '';
+    const sha256 = /name="sha256" value="([^"]+)"/.exec(form)?.[1] ?? '';
+    await send(`/onboarding/${id}/agreement`, aal2, {
+      version,
+      sha256: 'x',
+      name: 'Mehmet Demir',
+      title: 'GMY',
+      authorised: '1',
+      accept: '1',
+    });
+    await send(`/onboarding/${id}/agreement`, aal2, {
+      version,
+      sha256,
+      name: 'Mehmet Demir',
+      title: 'GMY',
+      authorised: '1',
+      accept: '1',
+    });
+    await get(`/onboarding/${id}?signed=1`, aal2);
+    await get(`/onboarding/${id}/agreement`, aal2);
+    await get(`/onboarding/${id}/documents`, aal2);
+    await get(`/onboarding/${id}/details`, aal2);
+    await get(`/onboarding/${id}/org`, aal2);
+    await get(`/onboarding/${id}`, other);
+    const second = await coreHooks().testInvite('ops@bank.example');
+    await send(`/join/${second.token}`, joiner, {});
+    await get('/onboarding', joiner);
     expect([...missing].sort()).toEqual([]);
   });
 });

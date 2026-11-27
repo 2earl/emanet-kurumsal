@@ -101,8 +101,136 @@ export interface CoreEvent {
   created_at: number;
 }
 
+// ---- Onboarding (2earl/emanet-core src/onboarding.ts) ----------------------------------------
+
+export type OnboardingStatus =
+  'invited' | 'in_progress' | 'signed' | 'approved' | 'rejected' | 'cancelled' | 'expired';
+
+export type DocumentKind =
+  'signed_contract' | 'signature_circular' | 'tax_certificate' | 'trade_registry' | 'other';
+export const DOCUMENT_KINDS: readonly DocumentKind[] = [
+  'signature_circular',
+  'tax_certificate',
+  'trade_registry',
+  'signed_contract',
+  'other',
+];
+export const REQUIRED_DOCUMENTS: readonly DocumentKind[] = [
+  'signature_circular',
+  'tax_certificate',
+];
+
+export interface CompanyDetails {
+  legalName: string;
+  address: string;
+  taxOffice: string;
+  vkn: string;
+  mersis: string | null;
+  kep: string | null;
+  signatoryName: string;
+  signatoryTitle: string;
+  billingEmail: string;
+  operationsName: string;
+  operationsEmail: string;
+  operationsPhone: string;
+  eInvoice: boolean;
+}
+
+export interface InvitationView {
+  id: string;
+  company: string;
+  contact_name: string;
+  contact_email: string;
+  locale: 'tr' | 'en';
+  invited_by: string;
+  status: OnboardingStatus;
+  expires_at: number;
+  claimed_by: string | null;
+}
+
+export interface OnboardingDocument {
+  id: string;
+  kind: DocumentKind;
+  file_ref: string;
+  sha256: string;
+  file_name: string;
+  content_type: string;
+  size: number;
+  uploaded_at: number;
+}
+
+export interface Onboarding {
+  id: string;
+  kind: Partner['kind'];
+  company: string;
+  contact_name: string;
+  contact_email: string;
+  locale: 'tr' | 'en';
+  price_list: {
+    default_kurus: number;
+    rules: {
+      make?: string;
+      model?: string;
+      year_from?: number;
+      year_to?: number;
+      fee_kurus: number;
+    }[];
+  } | null;
+  reconfirm_days: number;
+  status: OnboardingStatus;
+  invited_by: string;
+  expires_at: number;
+  org_id: string | null;
+  details: CompanyDetails | null;
+  contract_version: string | null;
+  contract_sha256: string | null;
+  signer_name: string | null;
+  signer_title: string | null;
+  signed_at: number | null;
+  decision_reason: string | null;
+  partner_id: string | null;
+  documents: OnboardingDocument[];
+  contract_text?: string | null;
+}
+
+export interface RenderedContract {
+  version: string;
+  sections: { title: string; paragraphs: string[] }[];
+  text: string;
+  sha256: string;
+}
+
 /** The core's PartnerApi, as reached over the CORE Service Binding. */
 export interface PartnerApi {
+  onboardingInvitation(token: string): Promise<Result<InvitationView>>;
+  claimOnboarding(token: string, userId: string): Promise<Result<{ id: string }>>;
+  myOnboardings(userId: string): Promise<Result<Onboarding[]>>;
+  onboarding(id: string, userId: string): Promise<Result<Onboarding>>;
+  linkOnboardingOrganization(id: string, userId: string, orgId: string): Promise<Result<null>>;
+  saveOnboardingDetails(
+    id: string,
+    userId: string,
+    details: Record<string, unknown>,
+  ): Promise<Result<CompanyDetails>>;
+  addOnboardingDocument(
+    id: string,
+    userId: string,
+    document: Omit<OnboardingDocument, 'id' | 'uploaded_at'>,
+  ): Promise<Result<{ id: string }>>;
+  onboardingContract(id: string, userId: string): Promise<Result<RenderedContract>>;
+  signOnboarding(
+    id: string,
+    userId: string,
+    input: {
+      version: string;
+      sha256: string;
+      name: string;
+      title: string;
+      ip: string | null;
+      authorised: boolean;
+    },
+  ): Promise<Result<null>>;
+
   partner(orgId: string): Promise<Result<Partner>>;
   upsertCase(orgId: string, actor: string, input: CaseInput): Promise<Result<CaseView>>;
   getCase(orgId: string, caseId: string): Promise<Result<CaseView>>;
@@ -148,3 +276,20 @@ export const can = {
   /** API keys and webhooks: they act for the whole organization. */
   manageIntegrations: (role: OrgRole) => role === 'owner' || role === 'admin',
 };
+
+/** login's OrganizationProvisioning (2earl/login src/org-provisioning.ts). */
+export interface OrganizationProvisioning {
+  hasAddress(userId: string, email: string): Promise<boolean>;
+  create(request: {
+    ownerId: string;
+    email: string;
+    name: string;
+    invitedBy: string;
+    service: string;
+  }): Promise<
+    | { ok: true; orgId: string }
+    | { ok: false; reason: 'no_account' | 'wrong_address' | 'not_staff' | 'invalid_name' | 'full' }
+  >;
+}
+export const provisioning = (env: Env): OrganizationProvisioning =>
+  env.ORG_PROVISIONING as unknown as OrganizationProvisioning;
