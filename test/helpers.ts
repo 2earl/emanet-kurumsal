@@ -60,6 +60,7 @@ export async function signIn(uid: string): Promise<string> {
 interface CoreTestHooks {
   testAddEvent(orgId: string, type: string, data: Record<string, unknown>): Promise<string>;
   testReset(): Promise<void>;
+  testInvite(email: string): Promise<{ id: string; token: string }>;
 }
 export const coreHooks = () => env.CORE as unknown as CoreTestHooks;
 
