@@ -31,7 +31,7 @@ const MARK =
 export interface Nav {
   signedIn: boolean;
   org?: { id: string; name: string; role: OrgRole };
-  current?: 'dashboard' | 'cases' | 'new' | 'upload' | 'keys' | 'webhooks';
+  current?: 'dashboard' | 'cases' | 'new' | 'upload' | 'invoices' | 'reports' | 'keys' | 'webhooks';
 }
 
 export function plate(value: string, size: '' | 'large' = ''): string {
@@ -70,6 +70,8 @@ export function layout(title: string, nav: Nav, body: string): string {
         ${link('cases', `/o/${org.id}/cases`, 'Cases')}
         ${org.role === 'auditor' ? '' : link('new', `/o/${org.id}/cases/new`, 'Add a vehicle')}
         ${org.role === 'auditor' ? '' : link('upload', `/o/${org.id}/upload`, 'Upload CSV')}
+        ${link('invoices', `/o/${org.id}/invoices`, 'Invoices')}
+        ${link('reports', `/o/${org.id}/reports`, 'Reports')}
         ${org.role === 'owner' || org.role === 'admin' ? link('keys', `/o/${org.id}/keys`, 'API keys') : ''}
         ${org.role === 'owner' || org.role === 'admin' ? link('webhooks', `/o/${org.id}/webhooks`, 'Webhooks') : ''}
       </nav>`
@@ -217,6 +219,7 @@ export function caseDetail(
   canWrite: boolean,
   notice: string | null,
   labels: Record<string, string>,
+  more = '',
 ): string {
   const org = nav.org;
   if (!org) throw new Error('caseDetail needs an organization');
@@ -262,6 +265,7 @@ export function caseDetail(
        <dt>${open ? 'Expires' : 'Closed'}</dt><dd>${open ? day(c.expires_at) : day(c.delivered_at ?? c.updated_at)}</dd>
        ${attrs.map(([k, v]) => `<dt>${data(labels[k] ?? k)}</dt><dd>${data(typeof v === 'boolean' ? (v ? '✓' : '✗') : String(v))}</dd>`).join('')}
      </dl></div>
+     ${more}
      <h2>Where to look</h2>
      ${places}
      ${actions}`,
@@ -513,6 +517,9 @@ export function apiDocs(origin: string): string {
        <tr><td><code translate="no">POST ${e}/api/v1/cases/confirm</code></td><td translate="no">cases:write</td><td>Confirm cases are still enforceable</td></tr>
        <tr><td><code translate="no">POST ${e}/api/v1/cases/{id}/withdraw</code></td><td translate="no">cases:write</td><td>Withdraw a case</td></tr>
        <tr><td><code translate="no">GET ${e}/api/v1/events?cursor=</code></td><td translate="no">events:read</td><td>Events, oldest first, if you poll instead of using webhooks</td></tr>
+       <tr><td><code translate="no">GET ${e}/api/v1/cases/{id}/timeline</code></td><td translate="no">cases:read</td><td>A case’s states and times</td></tr>
+       <tr><td><code translate="no">GET ${e}/api/v1/invoices</code></td><td translate="no">invoices:read</td><td>Your invoices</td></tr>
+       <tr><td><code translate="no">GET ${e}/api/v1/invoices/{id}</code></td><td translate="no">invoices:read</td><td>An invoice with its cases</td></tr>
      </tbody></table>
      <h2>A case</h2>
      <pre class="secret" translate="no">{

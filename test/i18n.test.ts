@@ -276,6 +276,29 @@ describe('Turkish', () => {
     const second = await coreHooks().testInvite('ops@bank.example');
     await send(`/join/${second.token}`, joiner, {});
     await get('/onboarding', joiner);
+    // Invoices, reports and a delivered case's documents.
+    const member = await signIn('member-1');
+    await get('/o/org-1/invoices', member);
+    await get('/o/org-1/invoices/inv-1', member);
+    await get('/o/org-1/invoices/nope', member);
+    await get('/o/org-1/reports', member);
+    await send('/o/org-1/cases/new', member, {
+      external_ref: 'TR-DOC',
+      vin: 'VF1RJA00061234567',
+      plate: '34 ABC 123',
+      make: 'Renault',
+      model: 'Clio',
+      icra_office: 'O',
+      icra_file_no: '1',
+      serh_date: '2026-01-01',
+      legal_basis: 'rehin',
+    });
+    const listed = await get('/o/org-1/cases', member);
+    const caseId = /cases\/([0-9a-f-]{36})/.exec(listed)?.[1] ?? '';
+    await coreHooks().testDeliver('org-1', caseId);
+    await get(`/o/org-1/cases/${caseId}`, member);
+    await get(`/o/org-1/cases/${caseId}/documents/nope`, member);
+
     expect([...missing].sort()).toEqual([]);
   });
 });

@@ -47,6 +47,7 @@ import {
 } from './i18n';
 import { KeyError, createKey, listKeys, revokeKey } from './keys';
 import { registerOnboarding } from './onboarding';
+import { caseExtras, invoiceDetail, invoiceList, reportCsv, reportPage } from './partner-pages';
 import * as pages from './pages';
 import {
   WebhookError,
@@ -429,9 +430,83 @@ export function createApp(now: () => number) {
         c.get('locale') === 'tr' ? f.labelTr : f.labelEn,
       ]),
     );
+    const [events, documents] = await Promise.all([
+      core(c.env).caseTimeline(org(c).orgId, result.value.id),
+      result.value.status === 'delivered'
+        ? core(c.env).caseDocuments(org(c).orgId, result.value.id)
+        : Promise.resolve({ ok: true as const, value: [] }),
+    ]);
     return c.html(
-      pages.caseDetail(nav(c), result.value, can.writeCases(org(c).role), notice, labels),
+      pages.caseDetail(
+        nav(c),
+        result.value,
+        can.writeCases(org(c).role),
+        notice,
+        labels,
+        caseExtras(
+          org(c).orgId,
+          result.value.id,
+          events.ok ? events.value : [],
+          documents.ok ? documents.value : [],
+        ),
+      ),
     );
+  });
+
+  // A custody document of a delivered case, streamed from R2; the core records the look.
+  app.get('/o/:org/cases/:id/documents/:document', async (c) => {
+    const found = await core(c.env).caseDocument(
+      org(c).orgId,
+      uid(c),
+      c.req.param('id'),
+      c.req.param('document'),
+    );
+    if (!found.ok)
+      return c.html(pages.problem(nav(c), 'Not found', 'This document doesn’t exist.'), 404);
+    const object = await c.env.EVIDENCE.get(found.value.file_ref);
+    if (!object)
+      return c.html(pages.problem(nav(c), 'Not found', 'This document doesn’t exist.'), 404);
+    const type = object.httpMetadata?.contentType ?? '';
+    const image = /^image\/(jpeg|png|webp|heic|heif)$/.test(type);
+    return new Response(object.body, {
+      headers: {
+        'Content-Type': image ? type : 'application/octet-stream',
+        'Content-Disposition': image
+          ? 'inline'
+          : `attachment; filename="${c.req.param('document').replace(/[^A-Za-z0-9-]/g, '')}"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  });
+
+  app.get('/o/:org/invoices', async (c) => {
+    const result = await core(c.env).invoices(org(c).orgId);
+    if (!result.ok) throw new Error(`core: ${result.error}`);
+    return c.html(invoiceList(nav(c), result.value));
+  });
+
+  app.get('/o/:org/invoices/:id', async (c) => {
+    const result = await core(c.env).invoice(org(c).orgId, c.req.param('id'));
+    if (!result.ok)
+      return c.html(pages.problem(nav(c), 'Not found', 'This invoice doesn’t exist.'), 404);
+    return c.html(invoiceDetail(nav(c), result.value));
+  });
+
+  app.get('/o/:org/reports', async (c) => {
+    const result = await core(c.env).report(org(c).orgId);
+    if (!result.ok) throw new Error(`core: ${result.error}`);
+    return c.html(reportPage(nav(c), result.value));
+  });
+
+  app.get('/o/:org/reports.csv', async (c) => {
+    const result = await core(c.env).report(org(c).orgId);
+    if (!result.ok) throw new Error(`core: ${result.error}`);
+    return new Response(reportCsv(result.value), {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="emanet-report.csv"',
+      },
+    });
   });
 
   app.post('/o/:org/cases/:id/withdraw', async (c) => {
