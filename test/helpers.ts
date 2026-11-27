@@ -61,6 +61,7 @@ interface CoreTestHooks {
   testAddEvent(orgId: string, type: string, data: Record<string, unknown>): Promise<string>;
   testReset(): Promise<void>;
   testInvite(email: string): Promise<{ id: string; token: string }>;
+  testDraftOnly(value: boolean): Promise<void>;
 }
 export const coreHooks = () => env.CORE as unknown as CoreTestHooks;
 

@@ -198,6 +198,8 @@ export interface RenderedContract {
   sections: { title: string; paragraphs: string[] }[];
   text: string;
   sha256: string;
+  /** False while 2earl's own details are missing: it can be read, not accepted. */
+  final: boolean;
 }
 
 /** The core's PartnerApi, as reached over the CORE Service Binding. */

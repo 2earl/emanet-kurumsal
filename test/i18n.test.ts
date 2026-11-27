@@ -237,6 +237,17 @@ describe('Turkish', () => {
     await get(`/onboarding/${id}/documents`, joiner);
     await get(`/onboarding/${id}/agreement`, joiner);
     const aal2 = await signIn('joiner-1!aal2');
+    await coreHooks().testDraftOnly(true);
+    await get(`/onboarding/${id}/agreement`, aal2);
+    await send(`/onboarding/${id}/agreement`, aal2, {
+      version: 'v',
+      sha256: 'x',
+      name: 'Mehmet Demir',
+      title: 'GMY',
+      authorised: '1',
+      accept: '1',
+    });
+    await coreHooks().testDraftOnly(false);
     const form = await get(`/onboarding/${id}/agreement`, aal2);
     const version = /name="version" value="([^"]+)"/.exec(form)?.[1] ?? '';
     const sha256 = /name="sha256" value="([^"]+)"/.exec(form)?.[1] ?? '';
