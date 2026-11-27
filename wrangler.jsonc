@@ -66,7 +66,7 @@
     {
       "binding": "DB",
       "database_name": "emanet-kurumsal",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "1567b5c9-9f77-45be-a12c-80eec38bc20b",
       "migrations_dir": "migrations",
     },
   ],
