@@ -93,6 +93,8 @@ export class PartnerApi extends WorkerEntrypoint {
   async partner(orgId) { return PARTNERS[orgId] ? ok(PARTNERS[orgId]) : fail('not_a_partner'); }
   async recordIntegration(orgId, actor, action, what) { integrations.push([orgId, actor, action, what]); return ok(null); }
   async testIntegrations() { return integrations; }
+  async reportError() {}
+  async webhookDisabled(orgId, host) { integrations.push([orgId, 'system', 'webhook_disabled', host]); return ok({ emailed: true }); }
   async upsertCase(orgId, actor, input) {
     const p = PARTNERS[orgId];
     if (!p) return fail('not_a_partner');

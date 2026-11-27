@@ -340,7 +340,11 @@ export async function sendDue(
       continue;
     }
     const wait = BACKOFF[attempts - 1];
-    await env.DB.batch([
+    const [, hook] = await env.DB.batch<{
+      org_id: string;
+      url: string;
+      disabled_at: number | null;
+    }>([
       wait === undefined
         ? env.DB.prepare(
             `UPDATE deliveries SET status = 'failed', attempts = ?, last_status = ? WHERE id = ?`,
@@ -351,9 +355,25 @@ export async function sendDue(
       env.DB.prepare(
         `UPDATE webhooks SET consecutive_failures = consecutive_failures + 1,
            disabled_at = CASE WHEN consecutive_failures + 1 >= ? THEN ? ELSE disabled_at END
-         WHERE id = ?`,
+         WHERE id = ? AND disabled_at IS NULL RETURNING org_id, url, disabled_at`,
       ).bind(DISABLE_AFTER, now, delivery.webhook_id),
     ]);
+    // Switched off just now: the company's operations contact is told (the core mails them) and
+    // staff see it. Told once: a webhook already off isn't counted again.
+    const off = hook?.results[0];
+    if (off && off.disabled_at !== null) {
+      try {
+        await core(env).webhookDisabled(off.org_id, new URL(off.url).hostname);
+      } catch (error) {
+        console.error(
+          JSON.stringify({
+            level: 'error',
+            event: 'webhook.alert_failed',
+            error: error instanceof Error ? error.name : 'error',
+          }),
+        );
+      }
+    }
   }
   return results.length;
 }

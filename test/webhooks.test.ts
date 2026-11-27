@@ -205,3 +205,31 @@ describe('the delivery log', () => {
     expect(await purgeDeliveries(env, at + 31 * 86_400)).toBe(2);
   });
 });
+
+describe('a webhook that keeps failing', () => {
+  it('is switched off after twenty failures, and the company is told once', async () => {
+    await createWebhook(
+      env,
+      {
+        orgId: 'org-1',
+        url: 'https://down.bank.example/hooks',
+        events: ['case.expired'],
+        uid: 'owner-1',
+      },
+      now(),
+    );
+    for (let i = 0; i < 21; i++) {
+      await coreHooks().testAddEvent('org-1', 'case.expired', { case_id: `c-${String(i)}` });
+    }
+    await enqueueEvents(env, now());
+    const failing: typeof fetch = () => Promise.resolve(new Response(null, { status: 500 }));
+    await sendDue(env, now(), failing);
+    const hook = await env.DB.prepare(
+      'SELECT disabled_at, consecutive_failures FROM webhooks',
+    ).first<{ disabled_at: number | null; consecutive_failures: number }>();
+    expect(hook?.disabled_at).not.toBeNull();
+    expect(hook?.consecutive_failures).toBe(20);
+    const told = (await coreHooks().testIntegrations()).filter((i) => i[2] === 'webhook_disabled');
+    expect(told).toEqual([['org-1', 'system', 'webhook_disabled', 'down.bank.example']]);
+  });
+});
