@@ -158,6 +158,33 @@ describe('joining Emanet', () => {
     expect(await download.text()).toContain('Örnek Bank A.Ş. 1234567890');
   });
 
+  it('lets the agreement be read, not accepted, while 2earl’s details are missing', async () => {
+    const { id, cookie } = await started();
+    await post(`/onboarding/${id}/org`, cookie, { mode: 'new', name: 'Örnek Bank' });
+    await post(`/onboarding/${id}/details`, cookie, DETAILS);
+    await coreHooks().testDraftOnly(true);
+    try {
+      const aal2 = await signIn('joiner-1!aal2');
+      const page = await (
+        await request(`/onboarding/${id}/agreement`, { headers: { Cookie: aal2 } })
+      ).text();
+      expect(page).toContain('EMANET HİZMET SÖZLEŞMESİ');
+      expect(page).toContain('2earl is completing its own details');
+      expect(page).not.toContain('Accept the agreement');
+      const refused = await post(`/onboarding/${id}/agreement`, aal2, {
+        version: 'v',
+        sha256: 'x',
+        name: 'Mehmet Demir',
+        title: 'GMY',
+        authorised: '1',
+        accept: '1',
+      });
+      expect(await refused.text()).toContain('Try again shortly');
+    } finally {
+      await coreHooks().testDraftOnly(false);
+    }
+  });
+
   it('accepts only an organization the person manages', async () => {
     const { id, cookie } = await started();
     const refused = await post(`/onboarding/${id}/org`, cookie, { mode: 'existing', org: 'org-1' });

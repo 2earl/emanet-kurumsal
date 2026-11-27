@@ -296,9 +296,11 @@ export function agreementStep(
        <p class="hint">Version ${data(contract.version)} · SHA-256 ${data(contract.sha256)}. The agreement is in Turkish, the language that governs it.</p>`
     : '';
   const signForm =
-    o.status === 'in_progress' && contract && o.details
-      ? fresh
-        ? `<form method="post" class="stack">
+    o.status === 'in_progress' && contract && o.details && !contract.final
+      ? '<p class="notice">2earl is completing its own details in the agreement. You can read it now and accept it once that’s done, usually within a working day.</p>'
+      : o.status === 'in_progress' && contract && o.details
+        ? fresh
+          ? `<form method="post" class="stack">
          <input type="hidden" name="version" value="${esc(contract.version)}">
          <input type="hidden" name="sha256" value="${esc(contract.sha256)}">
          <div class="grid2">
@@ -309,9 +311,9 @@ export function agreementStep(
          <label class="inline"><input type="checkbox" name="accept" value="1" required> <span>I have read the agreement and its annexes and accept them for the company.</span></label>
          <div><button type="submit">Accept the agreement</button></div>
        </form>`
-        : `<p>To accept, confirm it’s you with your second sign-in step.</p>
+          : `<p>To accept, confirm it’s you with your second sign-in step.</p>
            <p><a class="button" href="/signin?second_factor=1&amp;return=${encodeURIComponent(`/onboarding/${o.id}/agreement`)}">Confirm and continue</a></p>`
-      : '';
+        : '';
   return layout(
     'Agreement',
     nav,
@@ -353,6 +355,7 @@ export const ERROR_TEXT: Record<string, string> = {
     'The agreement changed since you opened it (for example, the details were edited). Read it again and accept.',
   not_authorised: 'Confirm that you may bind the company.',
   invalid_signer: 'Enter your full name and title.',
+  provider_incomplete: '2earl is completing its own details in the agreement. Try again shortly.',
   too_many_documents: 'That’s as many documents as an application can have.',
   file_type: 'Upload a PDF, JPEG or PNG.',
   file_size: 'The file is larger than 10 MB.',

@@ -474,5 +474,9 @@ export const tr: Catalog = {
     'That didn’t work. Try again.': 'Bu işlem olmadı. Yeniden deneyin.',
     'This application doesn’t exist.': 'Bu başvuru yok.',
     'There is no text yet.': 'Henüz metin yok.',
+    '2earl is completing its own details in the agreement. You can read it now and accept it once that’s done, usually within a working day.':
+      '2earl sözleşmedeki kendi bilgilerini tamamlıyor. Sözleşmeyi şimdi okuyabilir, bu işlem bitince (genellikle bir iş günü içinde) onaylayabilirsiniz.',
+    '2earl is completing its own details in the agreement. Try again shortly.':
+      '2earl sözleşmedeki kendi bilgilerini tamamlıyor. Kısa süre sonra yeniden deneyin.',
   },
 };

@@ -147,6 +147,7 @@ export class PartnerApi extends WorkerEntrypoint {
   async testReset() { cases.clear(); events.length = 0; }
 
   // Onboarding, as src/core.ts describes it; a token is 43 characters.
+  async testDraftOnly(value) { draftOnly = value; }
   async testInvite(email) {
     const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '').slice(0, 43);
     const id = crypto.randomUUID();
@@ -208,7 +209,7 @@ export class PartnerApi extends WorkerEntrypoint {
     const text = 'EMANET HİZMET SÖZLEŞMESİ\\n\\n' + o.details.legalName + ' ' + o.details.vkn;
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
     const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-    return ok({ version: '2026-11-27-draft', sha256, text,
+    return ok({ version: '2026-11-27-draft', sha256, text, final: !draftOnly,
       sections: [{ title: 'EMANET HİZMET SÖZLEŞMESİ', paragraphs: [o.details.legalName + ' ' + o.details.vkn] }] });
   }
   async signOnboarding(id, uid, input) {
@@ -218,6 +219,7 @@ export class PartnerApi extends WorkerEntrypoint {
     if (!input.authorised) return fail('not_authorised');
     const c = await this.onboardingContract(id, uid);
     if (!c.ok) return c;
+    if (!c.value.final) return fail('provider_incomplete');
     if (input.version !== c.value.version || input.sha256 !== c.value.sha256) return fail('contract_changed');
     Object.assign(o, { status: 'signed', contract_version: c.value.version, contract_sha256: c.value.sha256,
       contract_text: c.value.text, signer_name: input.name, signer_title: input.title, signed_at: now(), signer_ip: input.ip });
@@ -225,6 +227,7 @@ export class PartnerApi extends WorkerEntrypoint {
   }
 }
 const onboardings = new Map();
+let draftOnly = false;
 export default { fetch() { return new Response(null, { status: 404 }); } };
 `;
 
