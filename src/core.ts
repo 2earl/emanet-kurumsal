@@ -265,6 +265,8 @@ export interface Report {
 
 /** The core's PartnerApi, as reached over the CORE Service Binding. */
 export interface PartnerApi {
+  /** An unexpected error: a route pattern and an error's name, for staff's System page. */
+  reportError(event: string, detail: string): Promise<void>;
   caseTimeline(
     orgId: string,
     caseId: string,
@@ -312,6 +314,8 @@ export interface PartnerApi {
   ): Promise<Result<null>>;
 
   partner(orgId: string): Promise<Result<Partner>>;
+  /** A webhook was switched off after failing: the core mails the operations contact. */
+  webhookDisabled(orgId: string, host: string): Promise<Result<{ emailed: boolean }>>;
   /** Records a change to API keys or webhooks in the core's audit log. */
   recordIntegration(
     orgId: string,

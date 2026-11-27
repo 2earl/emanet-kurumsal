@@ -557,5 +557,8 @@ export const tr: Catalog = {
     'Not confirmed': 'Onaylanmadı',
     'This vehicle has been reported as delivered to a custodian car park, and 2earl is checking it. The case can’t be changed or withdrawn until that is decided.':
       'Bu aracın yediemin otoparkına teslim edildiği bildirildi ve 2earl bildirimi inceliyor. Karar verilene kadar dosya değiştirilemez veya geri çekilemez.',
+    'Something went wrong': 'Bir sorun oluştu',
+    'That didn’t work, and 2earl has been told. Try again in a moment.':
+      'İşlem tamamlanamadı; 2earl’e bildirildi. Biraz sonra yeniden deneyin.',
   },
 };

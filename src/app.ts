@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { routePath } from 'hono/route';
 import { createApi } from './api';
 import {
   SESSION_ABSOLUTE_SECONDS,
@@ -94,6 +95,43 @@ const errorText = (error: string, detail?: string) =>
 
 export function createApp(now: () => number) {
   const app = new Hono<AppEnv>();
+
+  // One line per request for Cloudflare's logs: the route's pattern (never the address itself,
+  // which carries IDs), the status and how long it took.
+  app.use('*', async (c: AppContext, next) => {
+    const started = Date.now();
+    await next();
+    console.log(
+      JSON.stringify({
+        level: c.res.status >= 500 ? 'error' : 'info',
+        event: 'request',
+        route: `${c.req.method} ${routePath(c)}`,
+        status: c.res.status,
+        ms: Date.now() - started,
+      }),
+    );
+  });
+
+  // Anything unexpected: the person gets a page that says so, and the core is told the route and
+  // the error's name (for the System page in Emanet Merkez and the alert email). Never the data.
+  app.onError(async (error, c) => {
+    const route = `${c.req.method} ${routePath(c)}`;
+    const name = error instanceof Error ? error.name : 'error';
+    console.error(JSON.stringify({ level: 'error', event: 'request.failed', route, error: name }));
+    try {
+      await core(c.env).reportError(route, name);
+    } catch {
+      // The core itself may be what failed; the log line above stands.
+    }
+    return c.html(
+      pages.problem(
+        { signedIn: false },
+        'Something went wrong',
+        'That didn’t work, and 2earl has been told. Try again in a moment.',
+      ),
+      500,
+    );
+  });
 
   // The API has its own authentication, headers and errors; none of the page middleware.
   app.route('/api/v1', createApi(now) as unknown as Hono<AppEnv>);
