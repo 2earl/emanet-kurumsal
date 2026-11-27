@@ -162,3 +162,46 @@ describe('delivery', () => {
     expect(row?.secret_enc).not.toContain(secret.slice(6));
   });
 });
+
+describe('the delivery log', () => {
+  it('signs each request with the time it is sent, and forgets finished deliveries after 30 days', async () => {
+    const { purgeDeliveries } = await import('../src/webhooks');
+    const hook = await createWebhook(
+      env,
+      {
+        orgId: 'org-1',
+        url: 'https://bank.example/hooks',
+        events: ['case.delivered'],
+        uid: 'owner-1',
+      },
+      now(),
+    );
+    await coreHooks().testAddEvent('org-1', 'case.delivered', { case_id: 'c-1' });
+    await coreHooks().testAddEvent('org-1', 'case.delivered', { case_id: 'c-2' });
+    await enqueueEvents(env, now());
+    const at = now();
+    const signed: number[] = [];
+    const realNow = Date.now;
+    let clock = realNow();
+    Date.now = () => clock;
+    try {
+      await sendDue(env, at, async (_url, init) => {
+        const header = new Headers(init?.headers).get('Emanet-Signature') ?? '';
+        const [, t = '', v1 = ''] = /^t=(\d+),v1=([0-9a-f]+)$/.exec(header) ?? [];
+        signed.push(Number(t));
+        expect(v1).toBe(
+          await hmacHex(hook.secret, `${t}.${typeof init?.body === 'string' ? init.body : ''}`),
+        );
+        // A slow receiver: the next request is sent four minutes later.
+        clock += 240_000;
+        return new Response(null, { status: 204 });
+      });
+    } finally {
+      Date.now = realNow;
+    }
+    expect(signed).toEqual([at, at + 240]);
+
+    expect(await purgeDeliveries(env, at + 29 * 86_400)).toBe(0);
+    expect(await purgeDeliveries(env, at + 31 * 86_400)).toBe(2);
+  });
+});

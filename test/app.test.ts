@@ -196,6 +196,12 @@ describe('API keys', () => {
     const html = await created.text();
     const key = /emk_[A-Za-z0-9_-]{8}_[A-Za-z0-9_-]{43}/.exec(html)?.[0] ?? '';
     expect(key).not.toBe('');
+    // Who made it is in the core's audit log.
+    expect((await coreHooks().testIntegrations()).at(-1)?.slice(0, 3)).toEqual([
+      'org-1',
+      'owner-1',
+      'key_created',
+    ]);
     const stored = await env.DB.prepare('SELECT hash FROM api_keys WHERE name = ?')
       .bind('Core banking')
       .first<{ hash: string }>();

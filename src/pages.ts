@@ -578,7 +578,7 @@ export function apiDocs(origin: string): string {
   "attributes": {}, "vehicle_attributes": {}
 }</pre>
      <h2>Errors</h2>
-     <p>Errors are <code translate="no">{ "error": "code", "detail": "…" }</code> with status 400, 401, 403, 404, 409 (duplicate_case, case_closed, vin_mismatch, conflict_retry), 422 (invalid input) or 429.</p>
+     <p>Errors are <code translate="no">{ "error": "code", "detail": "…" }</code> with status 400, 401, 403, 404, 409 (duplicate_case, case_closed, vin_mismatch, conflict_retry, delivery_in_review), 422 (invalid input) or 429.</p>
      <h2>Webhook signatures</h2>
      <p>Each call carries <code translate="no">Emanet-Signature: t=&lt;unix time&gt;,v1=&lt;hex&gt;</code>, where the hex is HMAC-SHA256 of <code translate="no">&lt;t&gt;.&lt;body&gt;</code> with the webhook’s secret. Refuse calls more than five minutes old, and use <code translate="no">Emanet-Event-Id</code> to ignore repeats.</p>`,
   );

@@ -60,6 +60,7 @@ export async function signIn(uid: string): Promise<string> {
 interface CoreTestHooks {
   testAddEvent(orgId: string, type: string, data: Record<string, unknown>): Promise<string>;
   testReset(): Promise<void>;
+  testIntegrations(): Promise<string[][]>;
   testInvite(email: string): Promise<{ id: string; token: string }>;
   testDraftOnly(value: boolean): Promise<void>;
   testDeliver(orgId: string, caseId: string): Promise<void>;

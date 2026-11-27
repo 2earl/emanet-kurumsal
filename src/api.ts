@@ -20,7 +20,15 @@ const MAX_BODY_BYTES = 1_000_000;
 function statusOf(error: string): 400 | 401 | 403 | 404 | 409 | 422 | 429 {
   if (error === 'not_found') return 404;
   if (error === 'not_a_partner' || error === 'partner_not_active') return 403;
-  if (['duplicate_case', 'case_closed', 'vin_mismatch', 'conflict_retry'].includes(error))
+  if (
+    [
+      'duplicate_case',
+      'case_closed',
+      'vin_mismatch',
+      'conflict_retry',
+      'delivery_in_review',
+    ].includes(error)
+  )
     return 409;
   if (error === 'invalid_json' || error === 'invalid_cursor') return 400;
   return 422;
@@ -62,6 +70,14 @@ export function createApi(now: () => number) {
     c.header('X-Robots-Tag', 'noindex, nofollow');
     const key = await authenticate(c.env, c.req.header('Authorization'), c.get('now'));
     if (!key) {
+      // Wrong keys are counted per address (right ones per key, below), so an address trying keys
+      // is slowed without touching other integrations behind the same address.
+      const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
+      const attempts = await c.env.API_RATE_LIMITER.limit({ key: `badkey:${ip}` });
+      if (!attempts.success) {
+        c.header('Retry-After', '60');
+        return c.json({ error: 'rate_limited' }, 429);
+      }
       c.header('WWW-Authenticate', 'Bearer realm="emanet-kurumsal"');
       return c.json(
         { error: 'invalid_key', detail: 'Send a valid API key as a Bearer token.' },
@@ -72,6 +88,15 @@ export function createApi(now: () => number) {
     if (!success) {
       c.header('Retry-After', '60');
       return c.json({ error: 'rate_limited' }, 429);
+    }
+    // As on the pages: a key works only while its organization is an active partner. A suspended
+    // company, or one whose organization was deleted, reads nothing more through an old key.
+    const partner = await core(c.env).partner(key.orgId);
+    if (!partner.ok || partner.value.status !== 'active') {
+      return c.json(
+        { error: 'partner_not_active', detail: 'This organization isn’t active in Emanet.' },
+        403,
+      );
     }
     c.set('orgId', key.orgId);
     c.set('keyId', key.keyId);

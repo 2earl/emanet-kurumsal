@@ -296,8 +296,8 @@ export const tr: Catalog = {
       'Webhook yerine sorgulama yapıyorsanız olaylar, en eskiden başlayarak',
     'A case': 'Bir dosya',
     Errors: 'Hatalar',
-    'Errors are <0/> with status 400, 401, 403, 404, 409 (duplicate_case, case_closed, vin_mismatch, conflict_retry), 422 (invalid input) or 429.':
-      'Hatalar <0/> biçimindedir; durum kodu 400, 401, 403, 404, 409 (duplicate_case, case_closed, vin_mismatch, conflict_retry), 422 (geçersiz girdi) veya 429 olur.',
+    'Errors are <0/> with status 400, 401, 403, 404, 409 (duplicate_case, case_closed, vin_mismatch, conflict_retry, delivery_in_review), 422 (invalid input) or 429.':
+      'Hatalar <0/> biçimindedir; durum kodu 400, 401, 403, 404, 409 (duplicate_case, case_closed, vin_mismatch, conflict_retry, delivery_in_review), 422 (geçersiz girdi) veya 429 olur.',
     'Webhook signatures': 'Webhook imzaları',
     'Each call carries <0/>, where the hex is HMAC-SHA256 of <1/> with the webhook’s secret. Refuse calls more than five minutes old, and use <2/> to ignore repeats.':
       'Her çağrı <0/> başlığını taşır; buradaki onaltılık değer, webhook’un gizli anahtarıyla <1/> üzerinden hesaplanan HMAC-SHA256’dır. Beş dakikadan eski çağrıları reddedin, tekrarları ayıklamak için <2/> başlığını kullanın.',
@@ -555,5 +555,7 @@ export const tr: Catalog = {
     'Confirmed one case.': 'Bir dosya onaylandı.',
     'Confirmed {0} cases.': '{0} dosya onaylandı.',
     'Not confirmed': 'Onaylanmadı',
+    'This vehicle has been reported as delivered to a custodian car park, and 2earl is checking it. The case can’t be changed or withdrawn until that is decided.':
+      'Bu aracın yediemin otoparkına teslim edildiği bildirildi ve 2earl bildirimi inceliyor. Karar verilene kadar dosya değiştirilemez veya geri çekilemez.',
   },
 };
