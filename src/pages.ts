@@ -26,12 +26,14 @@ const MARK =
   '<path fill="#F7931E" d="M100 0 50 50V100L100 50Z"/>' +
   '<path fill="#ED1C24" d="M0 50 50 100H15A15 15 0 0 1 0 85Z"/>' +
   '<path fill="#FBB03B" d="M100 50V85A15 15 0 0 1 85 100H50Z"/>' +
+  // Emanet: the 2earl hands holding something entrusted to them.
+  '<path fill="#ED1C24" d="M50 7 66 23 50 39 34 23Z"/>' +
   '</svg>';
 
 export interface Nav {
   signedIn: boolean;
   org?: { id: string; name: string; role: OrgRole };
-  current?: 'dashboard' | 'cases' | 'new' | 'upload' | 'invoices' | 'reports' | 'keys' | 'webhooks';
+  current?: 'dashboard' | 'cases' | 'new' | 'upload' | 'invoices' | 'reports' | 'integrations';
 }
 
 export function plate(value: string, size: '' | 'large' = ''): string {
@@ -55,10 +57,15 @@ export const status = (value: CaseStatus) =>
 export const lira = (kurus: number) =>
   `<span translate="no">₺${(kurus / 100).toLocaleString(currentLocale() === 'tr' ? 'tr-TR' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
 
+/** Turkey's time (UTC+3 all year): what a date means to the people using Emanet. */
+const turkey = (unix: number) => new Date((unix + 3 * 3600) * 1000).toISOString();
+
 export const day = (unix: number | null) =>
-  unix === null
-    ? '—'
-    : `<time translate="no">${new Date(unix * 1000).toISOString().slice(0, 10)}</time>`;
+  unix === null ? '—' : `<time translate="no">${turkey(unix).slice(0, 10)}</time>`;
+
+/** A date and time in Turkey's time. */
+export const moment = (unix: number) =>
+  `<time translate="no">${turkey(unix).slice(0, 16).replace('T', ' ')}</time>`;
 
 export function layout(title: string, nav: Nav, body: string): string {
   const org = nav.org;
@@ -72,8 +79,7 @@ export function layout(title: string, nav: Nav, body: string): string {
         ${org.role === 'auditor' ? '' : link('upload', `/o/${org.id}/upload`, 'Upload CSV')}
         ${link('invoices', `/o/${org.id}/invoices`, 'Invoices')}
         ${link('reports', `/o/${org.id}/reports`, 'Reports')}
-        ${org.role === 'owner' || org.role === 'admin' ? link('keys', `/o/${org.id}/keys`, 'API keys') : ''}
-        ${org.role === 'owner' || org.role === 'admin' ? link('webhooks', `/o/${org.id}/webhooks`, 'Webhooks') : ''}
+        ${org.role === 'owner' || org.role === 'admin' ? link('integrations', `/o/${org.id}/keys`, 'Integrations') : ''}
       </nav>`
     : '';
   const who = nav.signedIn
@@ -91,21 +97,29 @@ export function layout(title: string, nav: Nav, body: string): string {
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="bar">
   <a class="brand" href="/">${MARK}<span translate="no">Emanet Kurumsal</span></a>
   ${orgNav}
   ${who}
 </header>
-<main>
+<main id="main">
 ${body}
 </main>
 <footer>
   <span>Emanet is a private service of 2earl, not a public authority.</span>
-  <span><a href="https://2earl.com/privacy">Privacy</a> · <a href="https://2earl.com/terms">Terms</a> · <a href="/docs/api">API</a></span>
+  <span><a href="https://emanet.dev/gizlilik">Privacy notice</a> · <a href="https://emanet.dev/kullanim-sartlari">Terms of use</a> · <a href="https://emanet.dev/cerezler">Cookies</a> · <a href="mailto:iletisim@emanet.dev">Contact</a> · <a href="/docs/api">API</a></span>
   ${languageSwitcher()}
 </footer>
 </body>
 </html>`;
+}
+
+/** API keys and webhooks: one section, two pages. */
+function integrationTabs(orgId: string, current: 'keys' | 'webhooks'): string {
+  const tab = (key: 'keys' | 'webhooks', label: string) =>
+    `<a href="/o/${esc(orgId)}/${key}"${current === key ? ' aria-current="page"' : ''}>${label}</a>`;
+  return `<nav class="tabs" aria-label="Integrations">${tab('keys', 'API keys')}${tab('webhooks', 'Webhooks')}</nav>`;
 }
 
 export function problem(nav: Nav, title: string, text: string): string {
@@ -129,6 +143,7 @@ export function home(): string {
         <li>Agents never see a debtor’s name or debt.</li>
         <li>Access only for organizations set up by 2earl.</li>
       </ul>
+      <p class="hint">New to Emanet? <a href="https://emanet.dev">See how it works</a>, or write to <a href="mailto:iletisim@emanet.dev">iletisim@emanet.dev</a>.</p>
     </section>`,
   );
 }
@@ -137,7 +152,7 @@ export function orgPicker(choices: { orgId: string; name: string; role: OrgRole 
   const body =
     choices.length === 0
       ? `<h1>No organization yet</h1>
-         <p class="lede">Your account isn’t part of an organization that uses Emanet. Ask your organization’s administrator for an invitation, or write to legal@2earl.com.</p>`
+         <p class="lede">Your account isn’t part of an organization that uses Emanet. Ask your organization’s administrator for an invitation, or write to iletisim@emanet.dev.</p>`
       : `<h1>Choose an organization</h1>
          <ul class="plain">${choices
            .map((o) => `<li><a href="/o/${esc(o.orgId)}">${data(o.name)}</a></li>`)
@@ -149,6 +164,9 @@ export function dashboard(
   nav: Nav,
   counts: Record<CaseStatus, number>,
   recent: CaseView[],
+  expiring: CaseView[],
+  canWrite: boolean,
+  notice: string | null,
 ): string {
   const org = nav.org;
   if (!org) throw new Error('dashboard needs an organization');
@@ -158,14 +176,41 @@ export function dashboard(
         `<a href="/o/${org.id}/cases?status=${s}"><strong translate="no">${String(counts[s])}</strong><span>${STATUS_LABEL[s]}</span></a>`,
     )
     .join('');
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const actions = canWrite
+    ? `<p class="actions"><a class="button" href="/o/${org.id}/cases/new">Add a vehicle</a> <a class="button secondary" href="/o/${org.id}/upload">Upload CSV</a></p>`
+    : '';
+  const soon = expiring.length
+    ? `<h2>Expiring within three days</h2>
+       <p class="hint">Agents stop looking when a case expires. Confirm the ones whose seizure order still stands.</p>
+       ${
+         canWrite
+           ? `<form method="post" action="/o/${org.id}/cases/confirm" class="stack">
+                <table><thead><tr><th><span class="visually-hidden">Choose</span></th><th>Plate</th><th>Your reference</th><th>Expires</th></tr></thead><tbody>${expiring
+                  .map(
+                    (c) =>
+                      `<tr><td><input type="checkbox" name="case_ids" value="${esc(c.id)}" checked aria-label="${esc(c.vehicle.plate)}"></td><td><a href="/o/${org.id}/cases/${c.id}">${plate(c.vehicle.plate)}</a></td><td>${data(c.external_ref)}</td><td>${day(c.expires_at)}</td></tr>`,
+                  )
+                  .join('')}</tbody></table>
+                <div><button type="submit">Confirm the chosen cases</button></div>
+              </form>`
+           : caseTable(org.id, expiring)
+       }`
+    : '';
   return layout(
     'Overview',
     { ...nav, current: 'dashboard' },
-    `<h1>Overview</h1>
+    `${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
+     <h1>Overview</h1>
      <p class="lede">Cases stay searchable for as long as you confirm them. Confirm them again, or send them again, before they expire.</p>
+     ${actions}
      <div class="counts">${tiles}</div>
-     <h2>Recently changed</h2>
-     ${caseTable(org.id, recent)}`,
+     ${soon}
+     ${
+       total === 0
+         ? `<div class="panel empty"><h2>No vehicles yet</h2><p>Add your first vehicle with the form, upload a CSV file, or connect your systems with the <a href="/docs/api">API</a>.</p></div>`
+         : `<h2>Recently changed</h2>${caseTable(org.id, recent)}`
+     }`,
   );
 }
 
@@ -334,14 +379,14 @@ export function caseForm(
          ${input('vin', 'Chassis number (VIN)', 'maxlength="20" autocomplete="off"', '17 characters; without it, staff check the vehicle first')}
          ${input('make', 'Make', 'required maxlength="60"')}
          ${input('model', 'Model', 'required maxlength="60"')}
-         ${input('year', 'Year', 'inputmode="numeric" maxlength="4"')}
-         ${input('colour', 'Colour', 'maxlength="40"')}
+         ${input('year', 'Year', 'inputmode="numeric" maxlength="4"', 'optional')}
+         ${input('colour', 'Colour', 'maxlength="40"', 'optional')}
          ${customVehicle}
        </div></fieldset>
        <fieldset><legend>Enforcement file</legend><div class="grid2">
          ${input('external_ref', 'Your reference', 'required maxlength="100"', 'unique in your organization')}
          ${input('icra_office', 'Enforcement office', 'required maxlength="120"', 'e.g. İstanbul 5. İcra Dairesi')}
-         ${input('icra_file_no', 'File number', 'required maxlength="40"', 'e.g. 2026/12345')}
+         ${input('icra_file_no', 'File number', 'required maxlength="40"', 'format: 2026/12345')}
          ${input('serh_date', 'Seizure order date', 'type="date" required')}
          <label>Legal basis<select name="legal_basis" required>
            <option value="rehin"${values.legal_basis === 'haciz' ? '' : ' selected'}>Pledge (rehin)</option>
@@ -435,8 +480,8 @@ export function keysPage(
     : `<p class="panel">Creating a key needs a recent second factor. <a href="/signin?second_factor=1&amp;return=${encodeURIComponent(`/o/${org.id}/keys`)}">Verify it now</a>.</p>`;
   return layout(
     'API keys',
-    { ...nav, current: 'keys' },
-    `<h1>API keys</h1>
+    { ...nav, current: 'integrations' },
+    `${integrationTabs(org.id, 'keys')}<h1>API keys</h1>
      <p class="lede">A key acts for the whole organization. Keep it in your systems’ secret store; it is shown only once.</p>
      ${error ? `<p class="error">${esc(error)}</p>` : ''}
      ${created ? `<div class="notice"><p>Copy the key now. It won’t be shown again.</p><code class="secret" translate="no">${esc(created.key)}</code></div>` : ''}
@@ -488,8 +533,8 @@ export function webhooksPage(
     : `<p class="panel">Adding a webhook needs a recent second factor. <a href="/signin?second_factor=1&amp;return=${encodeURIComponent(`/o/${org.id}/webhooks`)}">Verify it now</a>.</p>`;
   return layout(
     'Webhooks',
-    { ...nav, current: 'webhooks' },
-    `<h1>Webhooks</h1>
+    { ...nav, current: 'integrations' },
+    `${integrationTabs(org.id, 'webhooks')}<h1>Webhooks</h1>
      <p class="lede">We call your address when a vehicle reaches custody, a case expires, 2earl rejects a case it couldn’t identify, or an invoice is issued. Each call is signed: check the <code translate="no">Emanet-Signature</code> header with the secret.</p>
      ${error ? `<p class="error">${esc(error)}</p>` : ''}
      ${created ? `<div class="notice"><p>Copy the signing secret now. It won’t be shown again.</p><code class="secret" translate="no">${esc(created.secret)}</code></div>` : ''}

@@ -111,3 +111,28 @@ describe('what a partner sees', () => {
     expect(await invoices.json()).toEqual([expect.objectContaining({ id: 'inv-1' })]);
   });
 });
+
+describe('the overview', () => {
+  it('helps an empty organization start, and confirms several cases at once', async () => {
+    const member = await signIn('member-1');
+    const empty = await (await request('/o/org-1', { headers: { Cookie: member } })).text();
+    expect(empty).toContain('No vehicles yet');
+    expect(empty).toContain('href="/o/org-1/cases/new"');
+    const id = await savedCase(member);
+    const confirmed = await post('/o/org-1/cases/confirm', member, { case_ids: [id] });
+    expect(confirmed.headers.get('Location')).toBe('/o/org-1?confirmed=1');
+    expect(
+      await (await request('/o/org-1?confirmed=1', { headers: { Cookie: member } })).text(),
+    ).toContain('Confirmed one case.');
+    const auditor = await signIn('auditor-1');
+    expect((await post('/o/org-1/cases/confirm', auditor, { case_ids: [id] })).status).toBe(403);
+  });
+
+  it('keeps API keys and webhooks under one section', async () => {
+    const owner = await signIn('owner-1');
+    const keys = await (await request('/o/org-1/keys', { headers: { Cookie: owner } })).text();
+    expect(keys).toContain('aria-label="Integrations"');
+    expect(keys).toContain('href="/o/org-1/webhooks"');
+    expect(keys).not.toContain('>Webhooks</a>\n        ');
+  });
+});
