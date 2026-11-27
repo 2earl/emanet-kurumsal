@@ -312,6 +312,14 @@ export interface PartnerApi {
   ): Promise<Result<null>>;
 
   partner(orgId: string): Promise<Result<Partner>>;
+  /** Records a change to API keys or webhooks in the core's audit log. */
+  recordIntegration(
+    orgId: string,
+    actor: string,
+    action:
+      'key_created' | 'key_revoked' | 'webhook_created' | 'webhook_deleted' | 'webhook_enabled',
+    what: string,
+  ): Promise<Result<null>>;
   upsertCase(orgId: string, actor: string, input: CaseInput): Promise<Result<CaseView>>;
   getCase(orgId: string, caseId: string): Promise<Result<CaseView>>;
   listCases(

@@ -82,6 +82,8 @@ const ERROR_TEXT: Record<string, string> = {
   case_closed: 'This case is closed.',
   vin_mismatch: 'This reference was created with another chassis number.',
   conflict_retry: 'Someone changed this vehicle at the same moment. Send it again.',
+  delivery_in_review:
+    'This vehicle has been reported as delivered to a custodian car park, and 2earl is checking it. The case can’t be changed or withdrawn until that is decided.',
   no_price_list: 'Your organization has no price list yet. Ask 2earl to set it up.',
   partner_not_active: 'Your organization isn’t active in Emanet.',
   invalid_field: 'A field has a value that isn’t allowed.',
@@ -640,6 +642,21 @@ export function createApp(now: () => number) {
   // ---- API keys and webhooks (owners and admins, with a fresh second factor) --------------------
 
   const integrations = (c: AppContext) => can.manageIntegrations(org(c).role);
+  /**
+   * Keys and webhooks act for the whole organization, so who made, revoked or deleted one goes to
+   * the core's audit log. The change itself never waits on, or fails with, the record.
+   */
+  const recordIntegration = async (
+    c: AppContext,
+    action: Parameters<ReturnType<typeof core>['recordIntegration']>[2],
+    what: string,
+  ) => {
+    try {
+      await core(c.env).recordIntegration(org(c).orgId, uid(c), action, what);
+    } catch (error) {
+      console.error('audit record failed', error instanceof Error ? error.name : 'error');
+    }
+  };
   const fresh = (c: AppContext) => {
     const session = c.get('session');
     return session !== null && hasFreshSecondFactor(session, c.get('now'));
@@ -669,6 +686,7 @@ export function createApp(now: () => number) {
         },
         c.get('now'),
       );
+      await recordIntegration(c, 'key_created', created.id);
       return c.html(
         pages.keysPage(nav(c), await listKeys(c.env, org(c).orgId), created, null, true),
       );
@@ -683,7 +701,9 @@ export function createApp(now: () => number) {
 
   app.post('/o/:org/keys/:id/revoke', async (c) => {
     if (!integrations(c)) return forbidden(c);
-    await revokeKey(c.env, org(c).orgId, c.req.param('id'), c.get('now'));
+    if (await revokeKey(c.env, org(c).orgId, c.req.param('id'), c.get('now'))) {
+      await recordIntegration(c, 'key_revoked', c.req.param('id'));
+    }
     return c.redirect(`/o/${org(c).orgId}/keys`, 303);
   });
 
@@ -700,7 +720,7 @@ export function createApp(now: () => number) {
     if (!integrations(c)) return forbidden(c);
     if (!fresh(c)) return c.redirect(`/o/${org(c).orgId}/webhooks`, 303);
     const form = await c.req.parseBody({ all: true });
-    let created: { secret: string } | null = null;
+    let created: { id: string; secret: string } | null = null;
     let error: string | null = null;
     try {
       created = await createWebhook(
@@ -712,6 +732,7 @@ export function createApp(now: () => number) {
       if (!(e instanceof WebhookError)) throw e;
       error = e.message;
     }
+    if (created) await recordIntegration(c, 'webhook_created', created.id);
     const [hooks, deliveries] = await Promise.all([
       listWebhooks(c.env, org(c).orgId),
       recentDeliveries(c.env, org(c).orgId),
@@ -724,13 +745,17 @@ export function createApp(now: () => number) {
 
   app.post('/o/:org/webhooks/:id/delete', async (c) => {
     if (!integrations(c)) return forbidden(c);
-    await deleteWebhook(c.env, org(c).orgId, c.req.param('id'));
+    if (await deleteWebhook(c.env, org(c).orgId, c.req.param('id'))) {
+      await recordIntegration(c, 'webhook_deleted', c.req.param('id'));
+    }
     return c.redirect(`/o/${org(c).orgId}/webhooks`, 303);
   });
 
   app.post('/o/:org/webhooks/:id/enable', async (c) => {
     if (!integrations(c)) return forbidden(c);
-    await enableWebhook(c.env, org(c).orgId, c.req.param('id'));
+    if (await enableWebhook(c.env, org(c).orgId, c.req.param('id'))) {
+      await recordIntegration(c, 'webhook_enabled', c.req.param('id'));
+    }
     return c.redirect(`/o/${org(c).orgId}/webhooks`, 303);
   });
 

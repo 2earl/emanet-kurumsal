@@ -302,8 +302,12 @@ export async function sendDue(
       url: string;
       secret_enc: string;
     }>();
+  const started = Date.now();
   for (const delivery of results) {
     let status: number;
+    // The time this request is signed with, not the time the run began: after a few slow
+    // receivers the two drift apart, and a receiver refuses a signature more than five minutes old.
+    const signedAt = now + Math.floor((Date.now() - started) / 1000);
     try {
       const secret = await decryptSecret(env, delivery.secret_enc);
       const response = await fetcher(delivery.url, {
@@ -314,7 +318,7 @@ export async function sendDue(
           'Content-Type': 'application/json',
           'User-Agent': 'Emanet-Webhooks/1',
           'Emanet-Event-Id': delivery.event_id,
-          'Emanet-Signature': `t=${String(now)},v1=${await sign(secret, now, delivery.payload)}`,
+          'Emanet-Signature': `t=${String(signedAt)},v1=${await sign(secret, signedAt, delivery.payload)}`,
         },
         body: delivery.payload,
       });
@@ -352,4 +356,18 @@ export async function sendDue(
     ]);
   }
   return results.length;
+}
+
+/** How long a finished delivery (sent, or given up) stays in the log. */
+export const DELIVERY_RETENTION_DAYS = 30;
+
+/** Cron: finished deliveries leave the log after 30 days; their payloads name cases and plates. */
+export async function purgeDeliveries(env: Env, now: number): Promise<number> {
+  const result = await env.DB.prepare(
+    `DELETE FROM deliveries WHERE id IN (
+       SELECT id FROM deliveries WHERE status IN ('delivered', 'failed') AND created_at < ? LIMIT 1000)`,
+  )
+    .bind(now - DELIVERY_RETENTION_DAYS * 86_400)
+    .run();
+  return result.meta.changes;
 }

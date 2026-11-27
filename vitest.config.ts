@@ -83,6 +83,7 @@ const viewed = [];
 const INVOICE = { id: 'inv-1', number: 'EMN2026000000001', issued_at: Math.floor(Date.now() / 1000) - 86400, net_kurus: 1000000,
   kdv_kurus: 200000, total_kurus: 1200000, paid_kurus: 0, status: 'issued', cases: 1 };
 const events = [];
+const integrations = [];
 const ok = (value) => ({ ok: true, value });
 const fail = (error, detail) => (detail === undefined ? { ok: false, error } : { ok: false, error, detail });
 const now = () => Math.floor(Date.now() / 1000);
@@ -90,6 +91,8 @@ const FIELDS = { case: [{ key: 'portfolio', labelTr: 'Portföy', labelEn: 'Portf
   enumValues: ['A', 'B'], required: false, deprecated: false, entity: 'case' }], vehicle: [], place: [] };
 export class PartnerApi extends WorkerEntrypoint {
   async partner(orgId) { return PARTNERS[orgId] ? ok(PARTNERS[orgId]) : fail('not_a_partner'); }
+  async recordIntegration(orgId, actor, action, what) { integrations.push([orgId, actor, action, what]); return ok(null); }
+  async testIntegrations() { return integrations; }
   async upsertCase(orgId, actor, input) {
     const p = PARTNERS[orgId];
     if (!p) return fail('not_a_partner');
@@ -147,7 +150,7 @@ export class PartnerApi extends WorkerEntrypoint {
     events.push({ orgId, id, type, data, created_at, cursor: created_at + '.' + id });
     return id;
   }
-  async testReset() { cases.clear(); events.length = 0; }
+  async testReset() { cases.clear(); events.length = 0; integrations.length = 0; }
 
   // Timelines, custody documents, invoices and the report.
   async testDeliver(orgId, caseId) {

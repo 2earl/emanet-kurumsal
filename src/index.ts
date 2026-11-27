@@ -1,5 +1,5 @@
 import { createApp } from './app';
-import { enqueueEvents, sendDue } from './webhooks';
+import { enqueueEvents, purgeDeliveries, sendDue } from './webhooks';
 
 /** Emanet Kurumsal at kurumsal.emanet.dev (docs/DESIGN.md §5). */
 
@@ -11,10 +11,22 @@ export default {
 
   // Every minute: read new events from emanet-core, then send what is due.
   scheduled(_controller, env, ctx): void {
+    // Each step on its own: a failure reading new events doesn't hold back what is already queued.
+    // Only the step's name and the error's name are logged, never data.
+    const steps: [string, () => Promise<unknown>][] = [
+      ['enqueue', () => enqueueEvents(env, now())],
+      ['send', () => sendDue(env, now())],
+      ['purge', () => purgeDeliveries(env, now())],
+    ];
     ctx.waitUntil(
       (async () => {
-        await enqueueEvents(env, now());
-        await sendDue(env, now());
+        for (const [name, step] of steps) {
+          try {
+            await step();
+          } catch (error) {
+            console.error(`cron ${name} failed`, error instanceof Error ? error.name : 'error');
+          }
+        }
       })(),
     );
   },

@@ -35,6 +35,15 @@ describe('API', () => {
     expect((await api('/cases', 'emk_AAAAAAAA_' + 'A'.repeat(43))).status).toBe(401);
   });
 
+  it('works only while the key’s organization is an active partner', async () => {
+    // org-3 is a partner 2earl hasn’t activated; org-9 isn’t a partner at all (deleted).
+    for (const orgId of ['org-3', 'org-9']) {
+      const response = await api('/cases', await key(['cases:read'], orgId));
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ error: 'partner_not_active' });
+    }
+  });
+
   it('adds, reads, lists and withdraws cases for the key’s organization', async () => {
     const k = await key();
     const created = await api('/cases', k, {
