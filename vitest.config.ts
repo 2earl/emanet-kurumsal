@@ -79,6 +79,9 @@ const PARTNERS = {
   'org-3': { id: 'p-3', orgId: 'org-3', kind: 'vys', legalName: 'Yeni Varlık A.Ş.', status: 'invited', reconfirmDays: 14 },
 };
 const cases = new Map();
+const viewed = [];
+const INVOICE = { id: 'inv-1', number: 'EMN2026000000001', issued_at: Math.floor(Date.now() / 1000) - 86400, net_kurus: 1000000,
+  kdv_kurus: 200000, total_kurus: 1200000, paid_kurus: 0, status: 'issued', cases: 1 };
 const events = [];
 const ok = (value) => ({ ok: true, value });
 const fail = (error, detail) => (detail === undefined ? { ok: false, error } : { ok: false, error, detail });
@@ -145,6 +148,47 @@ export class PartnerApi extends WorkerEntrypoint {
     return id;
   }
   async testReset() { cases.clear(); events.length = 0; }
+
+  // Timelines, custody documents, invoices and the report.
+  async testDeliver(orgId, caseId) {
+    for (const c of cases.values()) if (c.orgId === orgId && c.id === caseId) {
+      c.status = 'delivered'; c.delivered_at = now();
+      c.documents = [{ id: 'doc-1', kind: 'yediemin_receipt', sha256: 'ab'.repeat(32), taken_at: now() - 3600, created_at: now() - 3000, file_ref: 'claims/cl-1/doc-1' }];
+    }
+  }
+  async caseTimeline(orgId, caseId) {
+    for (const c of cases.values()) if (c.orgId === orgId && c.id === caseId) {
+      return ok([{ event: 'created', at: c.created_at }, ...(c.status === 'delivered' ? [{ event: 'delivered', at: c.delivered_at }] : [])]);
+    }
+    return fail('not_found');
+  }
+  async caseDocuments(orgId, caseId) {
+    for (const c of cases.values()) if (c.orgId === orgId && c.id === caseId) return ok((c.documents ?? []).map(({ file_ref, ...d }) => d));
+    return ok([]);
+  }
+  async caseDocument(orgId, actor, caseId, documentId) {
+    for (const c of cases.values()) if (c.orgId === orgId && c.id === caseId) {
+      const d = (c.documents ?? []).find((x) => x.id === documentId);
+      if (d) { viewed.push([orgId, actor, caseId, documentId]); return ok({ file_ref: d.file_ref, kind: d.kind }); }
+    }
+    return fail('not_found');
+  }
+  async testViewed() { return viewed; }
+  async invoices(orgId) {
+    if (!PARTNERS[orgId]) return fail('not_a_partner');
+    return ok(orgId === 'org-1' ? [INVOICE] : []);
+  }
+  async invoice(orgId, id) {
+    if (orgId !== 'org-1' || id !== INVOICE.id) return fail('not_found');
+    return ok({ ...INVOICE, lines: [{ case_id: 'c-x', external_ref: 'K-9', plate: '34ABC123', delivered_at: now() - 86400, net_kurus: 1000000, kdv_kurus: 200000 }] });
+  }
+  async report(orgId) {
+    if (!PARTNERS[orgId]) return fail('not_a_partner');
+    return ok({ open: 3, delivered_total: 1, recovery_rate: 0.5,
+      months: [{ month: '2026-11', added: 4, delivered: 1, withdrawn: 1, expired: 0, fees_kurus: 1000000, days_to_custody: 2.5 },
+               { month: '=cmd', added: 0, delivered: 0, withdrawn: 0, expired: 0, fees_kurus: 0, days_to_custody: null }],
+      by_city: [{ city: 'İstanbul', open: 3, delivered: 1 }] });
+  }
 
   // Onboarding, as src/core.ts describes it; a token is 43 characters.
   async testDraftOnly(value) { draftOnly = value; }

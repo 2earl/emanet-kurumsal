@@ -6,7 +6,7 @@ import { hmac, randomToken } from './http';
  * organization, so only owners and admins create them, after a fresh second factor.
  */
 
-export const KEY_SCOPES = ['cases:read', 'cases:write', 'events:read'] as const;
+export const KEY_SCOPES = ['cases:read', 'cases:write', 'events:read', 'invoices:read'] as const;
 export type KeyScope = (typeof KEY_SCOPES)[number];
 
 export interface ApiKey {

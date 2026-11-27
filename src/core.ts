@@ -202,8 +202,86 @@ export interface RenderedContract {
   final: boolean;
 }
 
+// ---- Timelines, custody documents, invoices, report (emanet-core src/partner-views.ts) --------
+
+export type TimelineEvent =
+  | 'created'
+  | 'updated'
+  | 'identity_accepted'
+  | 'identity_rejected'
+  | 'withdrawn'
+  | 'expired'
+  | 'delivered';
+
+export type CaseDocumentKind =
+  'scene' | 'police_report' | 'tow_report' | 'yediemin_receipt' | 'yediemin_vehicle';
+
+export interface CaseDocument {
+  id: string;
+  kind: CaseDocumentKind;
+  sha256: string;
+  taken_at: number | null;
+  created_at: number;
+}
+
+export interface PartnerInvoice {
+  id: string;
+  number: string | null;
+  issued_at: number;
+  net_kurus: number;
+  kdv_kurus: number;
+  total_kurus: number;
+  paid_kurus: number;
+  status: 'issued' | 'paid' | 'cancelled';
+  cases: number;
+}
+
+export interface InvoiceLine {
+  case_id: string;
+  external_ref: string;
+  plate: string | null;
+  delivered_at: number | null;
+  net_kurus: number;
+  kdv_kurus: number;
+}
+
+export interface ReportMonth {
+  month: string;
+  added: number;
+  delivered: number;
+  withdrawn: number;
+  expired: number;
+  fees_kurus: number;
+  days_to_custody: number | null;
+}
+
+export interface Report {
+  months: ReportMonth[];
+  open: number;
+  delivered_total: number;
+  recovery_rate: number | null;
+  by_city: { city: string; open: number; delivered: number }[];
+}
+
 /** The core's PartnerApi, as reached over the CORE Service Binding. */
 export interface PartnerApi {
+  caseTimeline(
+    orgId: string,
+    caseId: string,
+  ): Promise<Result<{ event: TimelineEvent; at: number }[]>>;
+  caseDocuments(orgId: string, caseId: string): Promise<Result<CaseDocument[]>>;
+  caseDocument(
+    orgId: string,
+    actor: string,
+    caseId: string,
+    documentId: string,
+  ): Promise<Result<{ file_ref: string; kind: CaseDocumentKind }>>;
+  invoices(orgId: string): Promise<Result<PartnerInvoice[]>>;
+  invoice(
+    orgId: string,
+    invoiceId: string,
+  ): Promise<Result<PartnerInvoice & { lines: InvoiceLine[] }>>;
+  report(orgId: string): Promise<Result<Report>>;
   onboardingInvitation(token: string): Promise<Result<InvitationView>>;
   claimOnboarding(token: string, userId: string): Promise<Result<{ id: string }>>;
   myOnboardings(userId: string): Promise<Result<Onboarding[]>>;

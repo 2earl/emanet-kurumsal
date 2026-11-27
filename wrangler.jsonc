@@ -67,6 +67,8 @@
   // Onboarding documents (signature circular, tax certificate, ...), in the EU like the rest.
   "r2_buckets": [
     { "binding": "DOCUMENTS", "bucket_name": "emanet-documents", "jurisdiction": "eu" },
+    // Custody documents of a delivered case, read only, streamed to that case's partner.
+    { "binding": "EVIDENCE", "bucket_name": "emanet-evidence", "jurisdiction": "eu" },
   ],
 
   "d1_databases": [

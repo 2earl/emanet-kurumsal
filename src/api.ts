@@ -144,6 +144,24 @@ export function createApi(now: () => number) {
     return reply(c, await core(c.env).getCase(c.get('orgId'), c.req.param('id')));
   });
 
+  api.get('/cases/:id/timeline', async (c) => {
+    const denied = allowed(c, 'cases:read');
+    if (denied) return denied;
+    return reply(c, await core(c.env).caseTimeline(c.get('orgId'), c.req.param('id')));
+  });
+
+  api.get('/invoices', async (c) => {
+    const denied = allowed(c, 'invoices:read');
+    if (denied) return denied;
+    return reply(c, await core(c.env).invoices(c.get('orgId')));
+  });
+
+  api.get('/invoices/:id', async (c) => {
+    const denied = allowed(c, 'invoices:read');
+    if (denied) return denied;
+    return reply(c, await core(c.env).invoice(c.get('orgId'), c.req.param('id')));
+  });
+
   api.post('/cases/:id/withdraw', async (c) => {
     const denied = allowed(c, 'cases:write');
     if (denied) return denied;
