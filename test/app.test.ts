@@ -170,6 +170,22 @@ describe('pages', () => {
     const list = await (await request('/o/org-1/cases', { headers: { Cookie: member } })).text();
     expect(list).toContain('34 ABC 123');
     expect(list).toContain('06 AB 1234');
+    expect(list).toContain('Most recently changed first.');
+
+    const found = await (
+      await request('/o/org-1/cases?q=34%20abc%20123', { headers: { Cookie: member } })
+    ).text();
+    expect(found).toContain('34 ABC 123');
+    expect(found).not.toContain('06 AB 1234');
+    expect(found).toContain('value="34 abc 123"');
+    const none = await (
+      await request('/o/org-1/cases?q=nothing', { headers: { Cookie: member } })
+    ).text();
+    expect(none).toContain('No case matches.');
+    const none2 = await (
+      await request('/o/org-1/cases?status=withdrawn', { headers: { Cookie: member } })
+    ).text();
+    expect(none2).toContain('No cases with this status.');
   });
 
   it('reports CSV problems by row and imports nothing', async () => {

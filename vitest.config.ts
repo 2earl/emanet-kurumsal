@@ -142,7 +142,9 @@ export class PartnerApi extends WorkerEntrypoint {
     return fail('not_found');
   }
   async listCases(orgId, query) {
-    const all = [...cases.values()].filter((c) => c.orgId === orgId && (!query.status || c.status === query.status));
+    const q = (query.search ?? '').replace(/\\s/g, '').toUpperCase();
+    const all = [...cases.values()].filter((c) => c.orgId === orgId && (!query.status || c.status === query.status)
+      && (!q || c.external_ref === query.search || c.vehicle.plate === q));
     return ok({ cases: all.slice(0, query.limit ?? 50), next_cursor: null });
   }
   async counts(orgId) {

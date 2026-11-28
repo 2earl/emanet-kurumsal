@@ -228,6 +228,14 @@ export function dashboard(
      <h1>Overview</h1>
      <p class="lede">Cases stay searchable for as long as you confirm them. Confirm them again, or send them again, before they expire.</p>
      ${actions}
+     ${
+       total > 0
+         ? `<form method="get" action="/o/${org.id}/cases" class="inline search" role="search">
+             <label>Find a case: plate, chassis number or your reference <input name="q" type="search" maxlength="60" autocomplete="off" spellcheck="false"></label>
+             <button class="secondary" type="submit">Find</button>
+           </form>`
+         : ''
+     }
      <div class="counts">${tiles}</div>
      ${soon}
      ${
@@ -238,9 +246,24 @@ export function dashboard(
   );
 }
 
-function caseTable(orgId: string, cases: CaseView[]): string {
+/** Days until a case stops being searched; a warning from three days on. */
+function expiry(c: CaseView, now: number | null): string {
+  if (c.status !== 'active' && c.status !== 'pending_identity') return '—';
+  if (now === null) return day(c.expires_at);
+  const days = Math.ceil((c.expires_at - now) / 86_400);
+  if (days > 3) return day(c.expires_at);
+  const text = days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${String(days)} days`;
+  return `${day(c.expires_at)} <span class="status expired">${text}</span>`;
+}
+
+function caseTable(
+  orgId: string,
+  cases: CaseView[],
+  now: number | null = null,
+  empty = 'No cases here yet.',
+): string {
   if (cases.length === 0) {
-    return `<div class="panel empty">${scene('inbox')}<p>No cases here yet.</p></div>`;
+    return `<div class="panel empty">${scene('inbox')}<p>${empty}</p></div>`;
   }
   return `<table class="cases">
     <thead><tr><th>Plate</th><th>Vehicle</th><th>Your reference</th><th>Status</th><th class="num">Fee</th><th>Expires</th></tr></thead>
@@ -252,7 +275,7 @@ function caseTable(orgId: string, cases: CaseView[]): string {
           <td>${data(c.external_ref)}</td>
           <td>${status(c.status)}</td>
           <td class="num">${lira(c.fee_kurus)}</td>
-          <td>${c.status === 'active' || c.status === 'pending_identity' ? day(c.expires_at) : '—'}</td>
+          <td>${expiry(c, now)}</td>
         </tr>`,
       )
       .join('')}</tbody>
@@ -264,23 +287,43 @@ export function caseList(
   cases: CaseView[],
   filter: CaseStatus | null,
   next: string | null,
+  search = '',
+  now: number | null = null,
 ): string {
   const org = nav.org;
   if (!org) throw new Error('caseList needs an organization');
+  const keep = (extra: string) =>
+    [filter ? `status=${filter}` : '', search ? `q=${encodeURIComponent(search)}` : '', extra]
+      .filter(Boolean)
+      .join('&amp;');
   const filters = [
-    `<a href="/o/${org.id}/cases"${filter === null ? ' aria-current="page"' : ''}>All</a>`,
+    `<a href="/o/${org.id}/cases${search ? `?q=${encodeURIComponent(search)}` : ''}"${filter === null ? ' aria-current="page"' : ''}>All</a>`,
     ...(['active', 'pending_identity', 'delivered', 'expired', 'withdrawn'] as const).map(
       (s) =>
-        `<a href="/o/${org.id}/cases?status=${s}"${filter === s ? ' aria-current="page"' : ''}>${STATUS_LABEL[s]}</a>`,
+        `<a href="/o/${org.id}/cases?status=${s}${search ? `&amp;q=${encodeURIComponent(search)}` : ''}"${filter === s ? ' aria-current="page"' : ''}>${STATUS_LABEL[s]}</a>`,
     ),
   ].join(' · ');
   const more = next
-    ? `<p><a class="button secondary" href="/o/${org.id}/cases?${filter ? `status=${filter}&amp;` : ''}cursor=${encodeURIComponent(next)}">Next page</a></p>`
+    ? `<p><a class="button secondary" href="/o/${org.id}/cases?${keep(`cursor=${encodeURIComponent(next)}`)}">Next page</a></p>`
     : '';
+  const searchForm = `<form method="get" action="/o/${org.id}/cases" class="inline search" role="search">
+      ${filter ? `<input type="hidden" name="status" value="${esc(filter)}">` : ''}
+      <label>Plate, chassis number or your reference <input name="q" type="search" maxlength="60" value="${esc(search)}" autocomplete="off" spellcheck="false"></label>
+      <button class="secondary" type="submit">Find</button>
+      ${search ? `<a href="/o/${org.id}/cases${filter ? `?status=${filter}` : ''}">Clear</a>` : ''}
+    </form>`;
+  const empty = search
+    ? 'No case matches. Check the plate or the reference; the search looks for an exact match.'
+    : filter
+      ? 'No cases with this status.'
+      : 'No cases here yet.';
   return layout(
     'Cases',
     { ...nav, current: 'cases' },
-    `<h1>Cases</h1><p>${filters}</p>${caseTable(org.id, cases)}${more}`,
+    `<h1>Cases</h1>
+     <p class="hint">Most recently changed first.</p>
+     ${searchForm}
+     <p class="filters">${filters}</p>${caseTable(org.id, cases, now, empty)}${more}`,
   );
 }
 
@@ -306,15 +349,18 @@ export function caseDetail(
   const attrs = Object.entries({ ...c.attributes, ...c.vehicle.attributes });
   const actions =
     canWrite && open
-      ? `<h2>Withdraw</h2>
-         <p class="hint">When the debt is paid, restructured or the order is lifted, withdraw the case at once: agents stop looking.</p>
-         <form method="post" action="/o/${org.id}/cases/${c.id}/withdraw" class="stack">
-           <label>Reason <input name="reason" required maxlength="200"></label>
-           <div><button type="submit">Withdraw case</button></div>
-         </form>
+      ? `<h2>Keep it running</h2>
+         <p class="hint">Agents look for this vehicle until ${day(c.expires_at)}. Confirm that the seizure order still stands to keep it searchable.</p>
          <form method="post" action="/o/${org.id}/cases/${c.id}/confirm" class="actions">
-           <button class="secondary" type="submit">Confirm it is still enforceable</button>
-         </form>`
+           <button type="submit">Confirm it is still enforceable</button>
+         </form>
+         <details class="withdraw"><summary>Withdraw this case</summary>
+           <p class="hint">When the debt is paid, restructured or the order is lifted, withdraw the case at once: agents stop looking. This can’t be undone; to search again, send the case again.</p>
+           <form method="post" action="/o/${org.id}/cases/${c.id}/withdraw" class="stack">
+             <label>Reason <input name="reason" required maxlength="200"></label>
+             <div><button class="danger" type="submit">Withdraw case</button></div>
+           </form>
+         </details>`
       : '';
   return layout(
     'Case',

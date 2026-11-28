@@ -437,14 +437,26 @@ export function createApp(now: () => number) {
     const status = c.req.query('status');
     const filter = CASE_STATUSES.includes(status as CaseStatus) ? (status as CaseStatus) : null;
     const cursor = c.req.query('cursor');
+    const search = (c.req.query('q') ?? '').trim().slice(0, 60);
     const result = await core(c.env).listCases(org(c).orgId, {
       ...(filter ? { status: filter } : {}),
       ...(cursor ? { cursor } : {}),
+      ...(search ? { search } : {}),
+      newest: true,
       limit: 50,
     });
     if (!result.ok)
       return c.html(pages.problem(nav(c), 'Not found', 'That page doesn’t exist.'), 404);
-    return c.html(pages.caseList(nav(c), result.value.cases, filter, result.value.next_cursor));
+    return c.html(
+      pages.caseList(
+        nav(c),
+        result.value.cases,
+        filter,
+        result.value.next_cursor,
+        search,
+        c.get('now'),
+      ),
+    );
   });
 
   async function schemaOf(c: AppContext) {

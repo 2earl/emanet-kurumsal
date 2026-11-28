@@ -18,6 +18,24 @@ export const tr: Catalog = {
   ],
   monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
   messages: {
+    'Keep it running': 'Aramayı sürdürün',
+    'Agents look for this vehicle until <0/>. Confirm that the seizure order still stands to keep it searchable.':
+      'Görevliler bu aracı <0/> tarihine kadar arar. Aranmaya devam etmesi için yakalama şerhinin sürdüğünü onaylayın.',
+    'Withdraw this case': 'Bu dosyayı geri çek',
+    'When the debt is paid, restructured or the order is lifted, withdraw the case at once: agents stop looking. This can’t be undone; to search again, send the case again.':
+      'Borç ödendiğinde, yapılandırıldığında ya da şerh kaldırıldığında dosyayı hemen geri çekin: görevliler aramayı bırakır. Bu geri alınamaz; yeniden aratmak için dosyayı yeniden gönderin.',
+    'Most recently changed first.': 'En son değişen en üstte.',
+    'Plate, chassis number or your reference': 'Plaka, şasi numarası ya da sizin referansınız',
+    'Find a case: plate, chassis number or your reference':
+      'Dosya bulun: plaka, şasi numarası ya da sizin referansınız',
+    Find: 'Bul',
+    Clear: 'Temizle',
+    'No case matches. Check the plate or the reference; the search looks for an exact match.':
+      'Eşleşen dosya yok. Plakayı ya da referansı kontrol edin; arama tam eşleşme arar.',
+    'No cases with this status.': 'Bu durumda dosya yok.',
+    Today: 'Bugün',
+    Tomorrow: 'Yarın',
+    'In <0/> days': '<0/> gün içinde',
     '<0/> Download all invoices (CSV)': '<0/> Tüm faturaları indir (CSV)',
     '<0/> Download the vehicles (CSV)': '<0/> Araçları indir (CSV)',
     'A case or a vehicle': 'Bir dosya ya da araç',
