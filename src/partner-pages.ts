@@ -242,7 +242,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 const TICKET_LABEL: Record<Ticket['status'], string> = {
   open: 'Waiting for 2earl',
   answered: '2earl answered',
-  closed: 'Closed',
+  closed: 'Solved',
 };
 
 export function supportList(

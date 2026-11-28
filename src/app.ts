@@ -662,7 +662,7 @@ export function createApp(now: () => number) {
   });
 
   const showTicket = async (c: AppContext, error: string | null, status: 200 | 422 = 200) => {
-    const found = await core(c.env).myTicket(org(c).orgId, c.req.param('id'));
+    const found = await core(c.env).myTicket(org(c).orgId, c.req.param('id') ?? '');
     if (!found.ok) {
       return c.html(pages.problem(nav(c), 'Not found', 'This message doesn’t exist.'), 404);
     }

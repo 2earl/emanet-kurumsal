@@ -53,9 +53,8 @@ export const tr: Catalog = {
     'To keep a copy, use your browser’s Print and choose Save as PDF.':
       'Kopyasını saklamak için tarayıcınızın Yazdır seçeneğinde PDF olarak kaydet’i seçin.',
     'What is it about?': 'Konu nedir?',
-    'Waiting for 2earl': '2earl’den yanıt bekleniyor',
     '2earl answered': '2earl yanıtladı',
-    Closed: 'Kapandı',
+    Solved: 'Çözüldü',
     'Your team': 'Ekibiniz',
     'Your reply': 'Yanıtınız',
     'Write again to reopen this': 'Yeniden açmak için yazın',
