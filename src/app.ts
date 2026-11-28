@@ -48,7 +48,18 @@ import {
 } from './i18n';
 import { KeyError, createKey, listKeys, revokeKey } from './keys';
 import { registerOnboarding } from './onboarding';
-import { caseExtras, invoiceDetail, invoiceList, reportCsv, reportPage } from './partner-pages';
+import {
+  caseExtras,
+  invoiceDetail,
+  invoiceLinesCsv,
+  invoiceList,
+  invoicesCsv,
+  reportCsv,
+  reportPage,
+  supportList,
+  supportNew,
+  supportThread,
+} from './partner-pages';
 import { apiDocs } from './api-docs';
 import { openapi, toYaml } from './openapi';
 import * as pages from './pages';
@@ -73,6 +84,11 @@ const list = (value: unknown): string[] =>
 
 /** What a person reads for each core error code. */
 const ERROR_TEXT: Record<string, string> = {
+  invalid_subject: 'Give your message a title of at least 3 characters.',
+  invalid_message: 'Write your message first.',
+  invalid_category: 'Choose what your message is about.',
+  too_many_open: 'You have five open messages. Wait for an answer or close one first.',
+  closed_long: 'This message was closed a while ago. Write a new one.',
   invalid_plate: 'The plate isn’t a Turkish plate (e.g. 34 ABC 123).',
   invalid_vin: 'The chassis number must be 17 letters and digits, without I, O or Q.',
   invalid_vehicle: 'Enter the make and model.',
@@ -580,6 +596,101 @@ export function createApp(now: () => number) {
     if (!result.ok)
       return c.html(pages.problem(nav(c), 'Not found', 'This invoice doesn’t exist.'), 404);
     return c.html(invoiceDetail(nav(c), result.value));
+  });
+
+  const csvResponse = (body: string, name: string) =>
+    new Response(body, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${name}"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+
+  app.get('/o/:org/invoices.csv', async (c) => {
+    const result = await core(c.env).invoices(org(c).orgId);
+    if (!result.ok) throw new Error(`core: ${result.error}`);
+    return csvResponse(invoicesCsv(result.value), 'emanet-invoices.csv');
+  });
+
+  app.get('/o/:org/invoices/:id/lines.csv', async (c) => {
+    const result = await core(c.env).invoice(org(c).orgId, c.req.param('id'));
+    if (!result.ok) {
+      return c.html(pages.problem(nav(c), 'Not found', 'This invoice doesn’t exist.'), 404);
+    }
+    return csvResponse(invoiceLinesCsv(result.value), 'emanet-invoice-vehicles.csv');
+  });
+
+  // ---- Support ----------------------------------------------------------------------------------
+
+  /** Auditors read; everyone else may write to 2earl. */
+  const canAsk = (c: AppContext) => org(c).role !== 'auditor';
+  const SUPPORT_DONE: Record<string, string> = {
+    ticket_sent: 'Sent. We answer here and email you when we do.',
+    ticket_replied: 'Sent.',
+    ticket_closed: 'Closed.',
+  };
+  const supportDone = (c: AppContext) => SUPPORT_DONE[c.req.query('done') ?? ''] ?? null;
+
+  app.get('/o/:org/support', async (c) => {
+    const result = await core(c.env).myTickets(org(c).orgId);
+    if (!result.ok) throw new Error(`core: ${result.error}`);
+    return c.html(supportList(nav(c), result.value, canAsk(c), supportDone(c)));
+  });
+
+  app.get('/o/:org/support/new', (c) => {
+    if (!canAsk(c)) return forbidden(c);
+    return c.html(supportNew(nav(c), { category: c.req.query('category') ?? 'other' }, null));
+  });
+
+  app.post('/o/:org/support/new', async (c) => {
+    if (!canAsk(c)) return forbidden(c);
+    const form = await c.req.parseBody();
+    const values: Record<string, string> = {};
+    for (const [key, value] of Object.entries(form)) {
+      values[key] = typeof value === 'string' ? value.trim() : '';
+    }
+    const result = await core(c.env).openTicket(org(c).orgId, uid(c), {
+      subject: values.subject ?? '',
+      category: values.category ?? '',
+      message: values.message ?? '',
+    });
+    if (!result.ok) {
+      return c.html(supportNew(nav(c), values, errorText(result.error)), 422);
+    }
+    return c.redirect(`/o/${org(c).orgId}/support/${result.value.id}?done=ticket_sent`, 303);
+  });
+
+  const showTicket = async (c: AppContext, error: string | null, status: 200 | 422 = 200) => {
+    const found = await core(c.env).myTicket(org(c).orgId, c.req.param('id') ?? '');
+    if (!found.ok) {
+      return c.html(pages.problem(nav(c), 'Not found', 'This message doesn’t exist.'), 404);
+    }
+    return c.html(supportThread(nav(c), found.value, canAsk(c), error, supportDone(c)), status);
+  };
+
+  app.get('/o/:org/support/:id', (c) => showTicket(c, null));
+
+  app.post('/o/:org/support/:id/reply', async (c) => {
+    if (!canAsk(c)) return forbidden(c);
+    const form = await c.req.parseBody();
+    const message = typeof form.message === 'string' ? form.message.trim() : '';
+    const result = await core(c.env).replyTicket(org(c).orgId, uid(c), c.req.param('id'), message);
+    if (!result.ok) {
+      return result.error === 'not_found'
+        ? c.html(pages.problem(nav(c), 'Not found', 'This message doesn’t exist.'), 404)
+        : showTicket(c, errorText(result.error), 422);
+    }
+    return c.redirect(`/o/${org(c).orgId}/support/${c.req.param('id')}?done=ticket_replied`, 303);
+  });
+
+  app.post('/o/:org/support/:id/close', async (c) => {
+    if (!canAsk(c)) return forbidden(c);
+    const result = await core(c.env).closeTicket(org(c).orgId, uid(c), c.req.param('id'));
+    if (!result.ok) {
+      return c.html(pages.problem(nav(c), 'Not found', 'This message doesn’t exist.'), 404);
+    }
+    return c.redirect(`/o/${org(c).orgId}/support?done=ticket_closed`, 303);
   });
 
   app.get('/o/:org/reports', async (c) => {

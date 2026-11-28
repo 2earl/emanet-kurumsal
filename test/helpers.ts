@@ -75,6 +75,7 @@ interface CoreTestHooks {
   testDraftOnly(value: boolean): Promise<void>;
   testDeliver(orgId: string, caseId: string): Promise<void>;
   testViewed(): Promise<string[][]>;
+  testStaffReply(ticketId: string, body: string): Promise<void>;
 }
 export const coreHooks = () => env.CORE as unknown as CoreTestHooks;
 

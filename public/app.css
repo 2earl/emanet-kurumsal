@@ -2623,3 +2623,16 @@ figure.code pre {
   color: var(--action-ink);
   text-decoration: none;
 }
+
+/* Invoices print as a plain page; staff answers in a support thread are marked. */
+@media print {
+  header,
+  nav,
+  footer,
+  .noprint {
+    display: none !important;
+  }
+}
+.card.staff {
+  border-left: 4px solid var(--accent, #f15a24);
+}

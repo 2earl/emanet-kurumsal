@@ -37,7 +37,8 @@ const MARK =
 export interface Nav {
   signedIn: boolean;
   org?: { id: string; name: string; role: OrgRole };
-  current?: 'dashboard' | 'cases' | 'new' | 'upload' | 'invoices' | 'reports' | 'integrations';
+  current?:
+    'dashboard' | 'cases' | 'new' | 'upload' | 'invoices' | 'reports' | 'integrations' | 'support';
 }
 
 export function plate(value: string, size: '' | 'large' = ''): string {
@@ -91,6 +92,7 @@ export function layout(title: string, nav: Nav, body: string): string {
         ${org.role === 'auditor' ? '' : link('upload', `/o/${org.id}/upload`, 'Upload CSV', 'upload')}
         ${link('invoices', `/o/${org.id}/invoices`, 'Invoices', 'invoice')}
         ${link('reports', `/o/${org.id}/reports`, 'Reports', 'chart')}
+        ${link('support', `/o/${org.id}/support`, 'Support', 'mail')}
         ${org.role === 'owner' || org.role === 'admin' ? link('integrations', `/o/${org.id}/keys`, 'Integrations', 'plug') : ''}
       </nav>`
     : '';

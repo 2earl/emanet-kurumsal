@@ -153,7 +153,7 @@ export class PartnerApi extends WorkerEntrypoint {
     events.push({ orgId, id, type, data, created_at, cursor: created_at + '.' + id });
     return id;
   }
-  async testReset() { cases.clear(); events.length = 0; integrations.length = 0; }
+  async testReset() { cases.clear(); events.length = 0; integrations.length = 0; tickets.clear(); }
 
   // Timelines, custody documents, invoices and the report.
   async testDeliver(orgId, caseId) {
@@ -187,6 +187,44 @@ export class PartnerApi extends WorkerEntrypoint {
   async invoice(orgId, id) {
     if (orgId !== 'org-1' || id !== INVOICE.id) return fail('not_found');
     return ok({ ...INVOICE, lines: [{ case_id: 'c-x', external_ref: 'K-9', plate: '34ABC123', delivered_at: now() - 86400, net_kurus: 1000000, kdv_kurus: 200000 }] });
+  }
+  async openTicket(orgId, userId, input) {
+    if (!PARTNERS[orgId]) return fail('not_a_partner');
+    if (input.subject.length < 3) return fail('invalid_subject');
+    if (input.message.length < 3) return fail('invalid_message');
+    if (!['case', 'invoice', 'integration', 'account', 'other'].includes(input.category)) return fail('invalid_category');
+    const id = 'tk-' + String(tickets.size + 1);
+    tickets.set(id, { orgId, ticket: { id, subject: input.subject, category: input.category, status: 'open',
+      created_at: now(), updated_at: now(), closed_at: null },
+      messages: [{ id: 'm1', author_kind: 'requester', body: input.message, created_at: now() }] });
+    return ok({ id });
+  }
+  async myTickets(orgId) {
+    if (!PARTNERS[orgId]) return fail('not_a_partner');
+    return ok([...tickets.values()].filter((t) => t.orgId === orgId).map((t) => t.ticket));
+  }
+  async myTicket(orgId, id) {
+    const t = tickets.get(id);
+    return t && t.orgId === orgId ? ok({ ticket: t.ticket, messages: t.messages }) : fail('not_found');
+  }
+  async replyTicket(orgId, userId, id, body) {
+    const t = tickets.get(id);
+    if (!t || t.orgId !== orgId) return fail('not_found');
+    if (body.length < 2) return fail('invalid_message');
+    t.messages.push({ id: 'm' + String(t.messages.length + 1), author_kind: 'requester', body, created_at: now() });
+    t.ticket.status = 'open';
+    return ok(null);
+  }
+  async closeTicket(orgId, userId, id) {
+    const t = tickets.get(id);
+    if (!t || t.orgId !== orgId) return fail('not_found');
+    t.ticket.status = 'closed';
+    return ok(null);
+  }
+  async testStaffReply(id, body) {
+    const t = tickets.get(id);
+    t.messages.push({ id: 'm' + String(t.messages.length + 1), author_kind: 'staff', body, created_at: now() });
+    t.ticket.status = 'answered';
   }
   async report(orgId) {
     if (!PARTNERS[orgId]) return fail('not_a_partner');
@@ -276,6 +314,7 @@ export class PartnerApi extends WorkerEntrypoint {
     return ok(null);
   }
 }
+const tickets = new Map();
 const onboardings = new Map();
 let draftOnly = false;
 export default { fetch() { return new Response(null, { status: 404 }); } };
