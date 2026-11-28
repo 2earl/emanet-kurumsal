@@ -37,6 +37,8 @@ const MARK =
 export interface Nav {
   signedIn: boolean;
   org?: { id: string; name: string; role: OrgRole };
+  /** Support messages 2earl answered; announced on every page except the support pages. */
+  answers?: number;
   current?:
     'dashboard' | 'cases' | 'new' | 'upload' | 'invoices' | 'reports' | 'integrations' | 'support';
 }
@@ -118,6 +120,11 @@ export function layout(title: string, nav: Nav, body: string): string {
   ${who}
 </header>
 <main id="main">
+${
+  org && nav.answers && nav.current !== 'support'
+    ? `<a class="ask-banner" href="/o/${esc(org.id)}/support">${icon('mail')}<span><strong>2earl answered your message</strong> Read the answer</span></a>`
+    : ''
+}
 ${body}
 </main>
 <footer>

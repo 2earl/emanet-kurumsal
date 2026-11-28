@@ -209,7 +209,11 @@ export function createApp(now: () => number) {
   const nav = (c: AppContext): pages.Nav => {
     const org = c.get('org') as AppEnv['Variables']['org'] | undefined;
     return org
-      ? { signedIn: true, org: { id: org.orgId, name: org.name, role: org.role } }
+      ? {
+          signedIn: true,
+          org: { id: org.orgId, name: org.name, role: org.role },
+          answers: org.answers,
+        }
       : { signedIn: c.get('session') !== null };
   };
 
@@ -359,7 +363,9 @@ export function createApp(now: () => number) {
       );
     }
     const name = memberships.find((m) => m.orgId === orgId)?.name ?? partner.value.legalName;
-    c.set('org', { orgId, name, role, partner: partner.value });
+    const tickets = await core(c.env).myTickets(orgId);
+    const answers = tickets.ok ? tickets.value.filter((t) => t.status === 'answered').length : 0;
+    c.set('org', { orgId, name, role, partner: partner.value, answers });
     await next();
     return undefined;
   };

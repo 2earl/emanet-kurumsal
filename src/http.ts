@@ -17,6 +17,8 @@ export interface OrgContext {
   name: string;
   role: OrgRole;
   partner: Partner;
+  /** Support messages 2earl has answered and nobody has replied to yet. */
+  answers: number;
 }
 
 export type AppEnv = {

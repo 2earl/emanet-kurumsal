@@ -120,6 +120,10 @@ describe('what a partner sees', () => {
     const where = (sent.headers.get('Location') ?? '').split('?')[0] ?? '';
     expect(sent.headers.get('Location')).toMatch(/\/support\/tk-\d+\?done=ticket_sent$/);
     await coreHooks().testStaffReply(where.split('/').pop() ?? '', 'It is on its way.');
+    const banner = await (
+      await request('/o/org-1/invoices', { headers: { Cookie: member } })
+    ).text();
+    expect(banner).toContain('2earl answered your message');
     const thread = await (await request(where, { headers: { Cookie: member } })).text();
     expect(thread).toContain('It is on its way.');
     expect(thread).toContain('2earl answered');

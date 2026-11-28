@@ -2636,3 +2636,22 @@ figure.code pre {
 .card.staff {
   border-left: 4px solid var(--accent, #f15a24);
 }
+
+/* A banner above the page: something is waiting for the reader. */
+.ask-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0 0 1.25rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--rule, #d8d4cc);
+  border-left: 4px solid var(--wait, #9a6412);
+  border-radius: 6px;
+  background: var(--paper, #fff);
+  color: inherit;
+  text-decoration: none;
+}
+.ask-banner strong {
+  display: block;
+}
