@@ -10,7 +10,7 @@ import { data, day, esc, layout } from './pages';
 
 export const KIND_LABEL: Record<(typeof REQUEST_KINDS)[number], string> = {
   bank: 'Bank',
-  vys: 'Wealth management company (VYŞ)',
+  vys: 'Asset management company (VYŞ)',
   law_firm: 'Law firm',
   leasing: 'Leasing company',
   other: 'Other',

@@ -66,7 +66,7 @@ export const tr: Catalog = {
     'Use an email address on your 2earl account: the invitation will be sent to it. You can add one in your 2earl account settings.':
       '2earl hesabınızdaki bir e-posta adresini kullanın: davet bu adrese gönderilir. 2earl hesap ayarlarınızdan adres ekleyebilirsiniz.',
     'We have your request': 'İsteğinizi aldık',
-    'Wealth management company (VYŞ)': 'Varlık yönetim şirketi (VYŞ)',
+    'Asset management company (VYŞ)': 'Varlık yönetim şirketi (VYŞ)',
     'What happens next': 'Sonra ne olur',
     'What kind of organization?': 'Kurumun türü',
     'Your account isn’t part of an organization that uses Emanet.':
