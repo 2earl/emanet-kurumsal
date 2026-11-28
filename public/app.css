@@ -4306,6 +4306,8 @@ section.card .card-foot .foot-actions {
     justify-self: end;
     color: var(--muted);
   }
+}
+
 /* Did our answer help: a question and two answers, the one given marked. */
 form.rate {
   display: flex;
