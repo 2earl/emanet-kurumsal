@@ -237,6 +237,7 @@ export function home(): string {
         <li>Agents never see a debtor’s name or debt.</li>
         <li>Access only for organizations set up by 2earl.</li>
       </ul>
+      <p class="hint">Your organization isn’t on Emanet yet? <a href="/request">Ask for an invitation</a>.</p>
       <p class="hint">New to Emanet? <a href="https://emanet.dev">See how it works</a>, or write to <a href="mailto:iletisim@emanet.dev">iletisim@emanet.dev</a>.</p>
       </div>
       ${scene('road')}

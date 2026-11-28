@@ -21,6 +21,7 @@ import {
   type Permission,
   core,
   orgs,
+  provisioning,
   type CaseInput,
   type CaseStatus,
   type FieldDefinition,
@@ -45,6 +46,7 @@ import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
   LOCALE_COOKIE_MAX_AGE,
+  currentLocale,
   isLocale,
   localizeHtml,
   pickLocale,
@@ -68,6 +70,7 @@ import {
 import { apiDocs } from './api-docs';
 import { openapi, toYaml } from './openapi';
 import * as pages from './pages';
+import * as requestPages from './request-pages';
 import {
   WebhookError,
   createWebhook,
@@ -250,26 +253,110 @@ export function createApp(now: () => number) {
 
   // ---- Public ---------------------------------------------------------------------------------
 
-  app.get('/', async (c) => {
-    const session = c.get('session');
-    if (!session) return c.html(pages.home());
-    const memberships = await orgs(c.env).membershipsOf(session.uid);
-    // Only organizations 2earl has set up as partners.
+  /** The account's organizations that 2earl has set up as partners. */
+  const partnersOf = async (c: AppContext, uid: string) => {
+    const memberships = await orgs(c.env).membershipsOf(uid);
     const partners = [];
     for (const m of memberships) {
       const partner = await core(c.env).partner(m.orgId);
       if (partner.ok && partner.value.status !== 'suspended') partners.push(m);
     }
+    return partners;
+  };
+  const isJoining = async (c: AppContext, uid: string) => {
+    const joining = await core(c.env).myOnboardings(uid);
+    return joining.ok && joining.value.some((o) => o.status !== 'approved');
+  };
+
+  app.get('/', async (c) => {
+    const session = c.get('session');
+    if (!session) return c.html(pages.home());
+    const partners = await partnersOf(c, session.uid);
     const only = partners[0];
     if (partners.length === 1 && only) return c.redirect(`/o/${only.orgId}`, 302);
+    if (partners.length > 0) return c.html(pages.orgPicker(partners));
     // Someone still joining Emanet continues where they left off.
-    if (partners.length === 0) {
-      const joining = await core(c.env).myOnboardings(session.uid);
-      if (joining.ok && joining.value.some((o) => o.status !== 'approved')) {
-        return c.redirect('/onboarding', 302);
-      }
+    if (await isJoining(c, session.uid)) return c.redirect('/onboarding', 302);
+    const latest = await core(c.env).myInvitationRequest(session.uid);
+    return c.html(
+      requestPages.noOrganization(
+        latest.ok ? latest.value : null,
+        c.req.query('requested') === '1' ? 'Request sent. We emailed you a copy.' : null,
+      ),
+    );
+  });
+
+  // ---- Asking for an invitation (no organization yet) -----------------------------------------
+
+  /** Where someone who shouldn't see the form goes instead, or null to show it. */
+  const requestElsewhere = async (c: AppContext, uid: string): Promise<string | null> => {
+    if ((await partnersOf(c, uid)).length > 0) return '/';
+    if (await isJoining(c, uid)) return '/onboarding';
+    const latest = await core(c.env).myInvitationRequest(uid);
+    if (latest.ok && latest.value && latest.value.status !== 'declined') return '/';
+    return null;
+  };
+
+  app.get('/request', async (c) => {
+    const session = c.get('session');
+    if (!session) return c.redirect('/signin?return=%2Frequest', 302);
+    const elsewhere = await requestElsewhere(c, session.uid);
+    if (elsewhere) return c.redirect(elsewhere, 302);
+    return c.html(requestPages.requestForm({}, null));
+  });
+
+  app.post('/request', async (c) => {
+    const session = c.get('session');
+    if (!session) return c.redirect('/signin?return=%2Frequest', 302);
+    if (!(await underRateLimit(c, 'request'))) {
+      return c.html(
+        pages.problem(nav(c), 'Too many attempts', 'Wait a minute and try again.'),
+        429,
+      );
     }
-    return c.html(pages.orgPicker(partners));
+    const elsewhere = await requestElsewhere(c, session.uid);
+    if (elsewhere) return c.redirect(elsewhere, 303);
+    const form = await c.req.parseBody();
+    const values: Record<string, string> = {};
+    for (const key of [
+      'company',
+      'kind',
+      'contactName',
+      'contactEmail',
+      'phone',
+      'jobTitle',
+      'volume',
+      'message',
+    ]) {
+      const value = form[key];
+      values[key] = typeof value === 'string' ? value : '';
+    }
+    const again = (error: string) =>
+      c.html(
+        requestPages.requestForm(
+          values,
+          requestPages.REQUEST_ERROR[error] ?? 'The request couldn’t be sent. Try again.',
+        ),
+        400,
+      );
+    const email = values.contactEmail?.trim() ?? '';
+    // The invitation goes to this address and only an account holding it can take it.
+    if (email && !(await provisioning(c.env).hasAddress(session.uid, email))) {
+      return again('not_your_address');
+    }
+    const sent = await core(c.env).requestInvitation(session.uid, {
+      company: values.company ?? '',
+      kind: values.kind ?? '',
+      contactName: values.contactName ?? '',
+      contactEmail: email,
+      phone: values.phone ?? '',
+      jobTitle: values.jobTitle ?? '',
+      volume: values.volume ?? '',
+      message: values.message ?? '',
+      locale: currentLocale(),
+    });
+    if (!sent.ok) return again(sent.error);
+    return c.redirect('/?requested=1', 303);
   });
 
   app.get('/docs/api', (c) => c.html(apiDocs(c.env.SITE_ORIGIN)));
