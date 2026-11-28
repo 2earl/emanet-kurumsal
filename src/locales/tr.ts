@@ -18,6 +18,8 @@ export const tr: Catalog = {
   ],
   monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
   messages: {
+    'This 2earl account was deleted. Sign in with another account.':
+      'Bu 2earl hesabı silindi. Başka bir hesapla giriş yapın.',
     'Switched off: the person who added it no longer manages integrations here':
       'Kapatıldı: ekleyen kişi artık burada entegrasyonları yönetmiyor',
     'Switched off while the organization wasn’t active': 'Kuruluş etkin değilken kapatıldı',

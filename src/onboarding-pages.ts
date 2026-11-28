@@ -328,6 +328,7 @@ export const ERROR_TEXT: Record<string, string> = {
   invalid_org: 'Choose an organization.',
   org_in_use: 'That organization is already used by another company’s application.',
   partner_exists: 'That organization already uses Emanet.',
+  account_deleted: 'This 2earl account was deleted. Sign in with another account.',
   org_locked: 'This application already has its organization. It can’t be changed.',
   invalid_details: 'A field isn’t valid. Check it and try again.',
   invalid_name: 'Enter a name for the organization.',
