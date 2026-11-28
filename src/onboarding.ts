@@ -112,16 +112,17 @@ export function registerOnboarding(app: Hono<AppEnv>, nav: (c: AppContext) => Na
     return c.html(pages.overview(nav(c), o, message));
   });
 
-  // Organization: a new one from login, or one the person already manages.
-  async function managed(c: AppContext) {
+  // Organization: always a new one, made in login for this application (docs/DESIGN.md §5).
+  async function linkedName(c: AppContext, o: Onboarding): Promise<string | null> {
+    if (!o.org_id) return null;
     const memberships = await orgs(c.env).membershipsOf(uid(c));
-    return memberships.filter((m) => m.role === 'owner' || m.role === 'admin');
+    return memberships.find((m) => m.orgId === o.org_id)?.name ?? null;
   }
 
   app.get('/onboarding/:id/org', async (c) => {
     const o = await load(c);
     if (o instanceof Response) return o;
-    return c.html(pages.orgStep(nav(c), o, await managed(c), null));
+    return c.html(pages.orgStep(nav(c), o, await linkedName(c, o), null));
   });
 
   app.post('/onboarding/:id/org', async (c) => {
@@ -129,24 +130,18 @@ export function registerOnboarding(app: Hono<AppEnv>, nav: (c: AppContext) => Na
     if (o instanceof Response) return o;
     const form = await c.req.parseBody();
     const fail = async (error: string) =>
-      c.html(pages.orgStep(nav(c), o, await managed(c), pages.onboardingError(error)), 422);
-    let orgId = text(form.org);
-    if (text(form.mode) === 'new') {
-      if (o.org_id !== null) return fail('not_editable');
-      if (!(await underRateLimit(c, 'onboarding-org'))) return fail('full');
-      const created = await provisioning(c.env).create({
-        ownerId: uid(c),
-        email: o.contact_email,
-        name: text(form.name),
-        invitedBy: o.invited_by,
-        service: 'emanet',
-      });
-      if (!created.ok) return fail(created.reason);
-      orgId = created.orgId;
-    } else if (!(await managed(c)).some((m) => m.orgId === orgId)) {
-      return fail('invalid_org');
-    }
-    const linked = await core(c.env).linkOnboardingOrganization(o.id, uid(c), orgId);
+      c.html(pages.orgStep(nav(c), o, await linkedName(c, o), pages.onboardingError(error)), 422);
+    if (o.org_id !== null) return fail('org_locked');
+    if (!(await underRateLimit(c, 'onboarding-org'))) return fail('full');
+    const created = await provisioning(c.env).create({
+      ownerId: uid(c),
+      email: o.contact_email,
+      name: text(form.name),
+      invitedBy: o.invited_by,
+      service: 'emanet',
+    });
+    if (!created.ok) return fail(created.reason);
+    const linked = await core(c.env).linkOnboardingOrganization(o.id, uid(c), created.orgId);
     if (!linked.ok) return fail(linked.error);
     return after(c, o, 'details');
   });

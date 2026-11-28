@@ -6,7 +6,6 @@ import {
   type InvitationView,
   type Onboarding,
   type OnboardingStatus,
-  type OrgRole,
   type RenderedContract,
 } from './core';
 import { data, day, esc, layout, lira, type Nav } from './pages';
@@ -146,23 +145,9 @@ export function overview(nav: Nav, o: Onboarding, message: string | null): strin
 export function orgStep(
   nav: Nav,
   o: Onboarding,
-  owned: { orgId: string; name: string; role: OrgRole }[],
+  linkedName: string | null,
   message: string | null,
 ): string {
-  const linked = owned.find((m) => m.orgId === o.org_id);
-  const choose = owned.length
-    ? `<h2>Use an organization you already manage</h2>
-       <form method="post" class="stack">
-         <input type="hidden" name="mode" value="existing">
-         <fieldset class="checks"><legend>Organization</legend>${owned
-           .map(
-             (m) =>
-               `<label><input type="radio" name="org" value="${esc(m.orgId)}"${m.orgId === o.org_id ? ' checked' : ''} required> ${data(m.name)}</label>`,
-           )
-           .join('')}</fieldset>
-         <div><button class="secondary" type="submit">Use this organization</button></div>
-       </form>`
-    : '';
   return layout(
     'Organization',
     nav,
@@ -170,17 +155,17 @@ export function orgStep(
      <h1>Your organization</h1>
      <p class="lede">Your colleagues sign in to Emanet as members of the company’s 2earl organization. You’ll be its owner and can invite them, give roles and require two-step sign-in, at login.2earl.com.</p>
      ${error(message)}
-     ${linked ? `<p class="notice">Linked: ${data(linked.name)}</p>` : o.org_id ? '<p class="notice">An organization is linked.</p>' : ''}
      ${
-       open(o)
-         ? `<h2>Create the company’s organization</h2>
+       o.org_id
+         ? `<p class="notice">Created: ${linkedName ? data(linkedName) : 'the company’s organization'}. It belongs to this application and can’t be changed.</p>`
+         : open(o)
+           ? `<h2>Create the company’s organization</h2>
+     <p class="hint">Emanet always uses a new organization, made for the company now, with you as its only member. An organization you already have can’t be used: its members and settings weren’t part of this application.</p>
      <form method="post" class="stack">
-       <input type="hidden" name="mode" value="new">
        <label>Organization name <input name="name" required maxlength="100" value="${esc(o.details?.legalName ?? o.company)}"></label>
        <div><button type="submit">Create organization</button></div>
-     </form>
-     ${choose}`
-         : ''
+     </form>`
+           : ''
      }`,
   );
 }
@@ -343,6 +328,7 @@ export const ERROR_TEXT: Record<string, string> = {
   invalid_org: 'Choose an organization.',
   org_in_use: 'That organization is already used by another company’s application.',
   partner_exists: 'That organization already uses Emanet.',
+  org_locked: 'This application already has its organization. It can’t be changed.',
   invalid_details: 'A field isn’t valid. Check it and try again.',
   invalid_name: 'Enter a name for the organization.',
   full: 'Your account is in as many organizations as it can be. Leave one at login.2earl.com.',

@@ -1,5 +1,5 @@
 import { createApp } from './app';
-import { enqueueEvents, purgeDeliveries, sendDue } from './webhooks';
+import { enqueueEvents, guardWebhooks, purgeDeliveries, sendDue } from './webhooks';
 
 /** Emanet Kurumsal at kurumsal.emanet.dev (docs/DESIGN.md §5). */
 
@@ -20,6 +20,15 @@ export default {
     ];
     ctx.waitUntil(
       (async () => {
+        // Webhooks whose creator left, or whose organization isn't active, are switched off
+        // first. If that check can't run, nothing is queued or sent this time: fail closed.
+        try {
+          await guardWebhooks(env, now());
+        } catch (error) {
+          console.error('cron guard failed', error instanceof Error ? error.name : 'error');
+          await purgeDeliveries(env, now()).catch(() => undefined);
+          return;
+        }
         for (const [name, step] of steps) {
           try {
             await step();

@@ -786,6 +786,12 @@ export function keysPage(
   );
 }
 
+const WEBHOOK_OFF: Record<NonNullable<Webhook['disabled_reason']>, string> = {
+  failures: 'Switched off after repeated failures',
+  owner_left: 'Switched off: the person who added it no longer manages integrations here',
+  partner_inactive: 'Switched off while the organization wasn’t active',
+};
+
 export function webhooksPage(
   nav: Nav,
   hooks: Webhook[],
@@ -800,8 +806,8 @@ export function webhooksPage(
     ? `<table><thead><tr><th>Address</th><th>Events</th><th>State</th><th></th></tr></thead><tbody>${hooks
         .map(
           (h) => `<tr><td>${data(h.url)}</td><td translate="no">${esc(h.events.join(', '))}</td>
-            <td>${h.disabled_at ? 'Switched off after repeated failures' : 'On'}</td>
-            <td class="actions">${h.disabled_at ? `<form method="post" action="/o/${org.id}/webhooks/${h.id}/enable"><button class="secondary" type="submit">Switch on</button></form>` : ''}
+            <td>${h.disabled_at ? WEBHOOK_OFF[h.disabled_reason ?? 'failures'] : 'On'}</td>
+            <td class="actions">${h.disabled_at && fresh ? `<form method="post" action="/o/${org.id}/webhooks/${h.id}/enable"><button class="secondary" type="submit">Switch on</button></form>` : ''}
             <form method="post" action="/o/${org.id}/webhooks/${h.id}/delete"><button class="secondary" type="submit">Delete</button></form></td></tr>`,
         )
         .join('')}</tbody></table>`

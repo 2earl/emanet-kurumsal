@@ -10,6 +10,7 @@ const form = (over: Record<string, string> = {}) => ({
   jobTitle: 'Hukuk Müdürü',
   volume: 'medium',
   message: 'Yaklaşık 300 dosya.',
+  'cf-turnstile-response': 'pass',
   ...over,
 });
 
@@ -75,5 +76,34 @@ describe('asking for an invitation', () => {
     const member = await signIn('member-1');
     expect((await page('/request', member)).headers.get('Location')).toBe('/');
     expect((await post('/request', member, form())).status).toBe(303);
+  });
+
+  it('asks for the Turnstile check, and refuses a request without a good one', async () => {
+    const cookie = await signIn('asker-5');
+    const blank = await page('/request', cookie);
+    const csp = blank.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain('script-src https://challenges.cloudflare.com');
+    expect(csp).toContain('frame-src https://challenges.cloudflare.com');
+    const html = await blank.text();
+    expect(html).toContain('data-sitekey="1x00000000000000000000AA"');
+    expect(html).toContain('data-action="invitation_request"');
+    // Only this page may load the script.
+    expect((await request('/')).headers.get('Content-Security-Policy')).not.toContain('script-src');
+    for (const [token, text] of [
+      ['', 'Complete the check'],
+      ['nope', 'The check didn’t pass'],
+      ['other-site', 'The check didn’t pass'],
+      ['other-form', 'The check didn’t pass'],
+    ] as const) {
+      const refused = await post(
+        '/request',
+        cookie,
+        form({ contactEmail: 'a5@firma.example', 'cf-turnstile-response': token }),
+      );
+      expect(refused.status).toBe(400);
+      expect(await refused.text()).toContain(text);
+    }
+    // Nothing reached the core.
+    expect(await (await page('/', cookie)).text()).not.toContain('We have your request');
   });
 });

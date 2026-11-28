@@ -93,6 +93,12 @@ export const CSP = [
   "base-uri 'none'",
 ].join('; ');
 
+/**
+ * The invitation request page only: Cloudflare Turnstile's script and frame (src/captcha.ts).
+ * Chosen by path in the middleware, so no other page can widen its own policy.
+ */
+export const CAPTCHA_CSP = `${CSP}; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com`;
+
 export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
   'Referrer-Policy': 'same-origin',

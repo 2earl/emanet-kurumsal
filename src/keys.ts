@@ -105,18 +105,19 @@ export async function authenticate(
   env: Env,
   header: string | undefined,
   now: number,
-): Promise<{ keyId: string; orgId: string; scopes: KeyScope[] } | null> {
+): Promise<{ keyId: string; orgId: string; scopes: KeyScope[]; createdBy: string } | null> {
   const match = /^Bearer (\S+)$/.exec(header ?? '');
   const key = match?.[1];
   if (!key || !KEY.test(key)) return null;
   const row = await env.DB.prepare(
-    `SELECT id, org_id, scopes, expires_at, revoked_at, last_used_at FROM api_keys WHERE hash = ?`,
+    `SELECT id, org_id, scopes, created_by, expires_at, revoked_at, last_used_at FROM api_keys WHERE hash = ?`,
   )
     .bind(await hmac(env.SESSION_PEPPER, `apikey:${key}`))
     .first<{
       id: string;
       org_id: string;
       scopes: string;
+      created_by: string;
       expires_at: number | null;
       revoked_at: number | null;
       last_used_at: number | null;
@@ -130,5 +131,10 @@ export async function authenticate(
       .bind(now, row.id)
       .run();
   }
-  return { keyId: row.id, orgId: row.org_id, scopes: JSON.parse(row.scopes) as KeyScope[] };
+  return {
+    keyId: row.id,
+    orgId: row.org_id,
+    scopes: JSON.parse(row.scopes) as KeyScope[],
+    createdBy: row.created_by,
+  };
 }

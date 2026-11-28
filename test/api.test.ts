@@ -35,6 +35,31 @@ describe('API', () => {
     expect((await api('/cases', 'emk_AAAAAAAA_' + 'A'.repeat(43))).status).toBe(401);
   });
 
+  it('stops a key when the person who made it no longer manages integrations', async () => {
+    const authz = env.AUTHZ as unknown as {
+      testGive(uid: string, orgId: string, permissions: string[]): Promise<void>;
+    };
+    await authz.testGive('auditor-1', 'org-1', ['emanet:integrations.manage']);
+    const made = (
+      await createKey(
+        env,
+        {
+          orgId: 'org-1',
+          name: 'k-left',
+          scopes: ['cases:read'],
+          uid: 'auditor-1',
+          expiresInDays: 30,
+        },
+        now(),
+      )
+    ).key;
+    expect((await api('/cases', made)).status).toBe(200);
+    await authz.testGive('auditor-1', 'org-1', []);
+    const refused = await api('/cases', made);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({ error: 'key_owner_left' });
+  });
+
   it('works only while the key’s organization is an active partner', async () => {
     // org-3 is a partner 2earl hasn’t activated; org-9 isn’t a partner at all (deleted).
     for (const orgId of ['org-3', 'org-9']) {
