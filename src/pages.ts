@@ -310,6 +310,50 @@ function caseTable(
   </table>`;
 }
 
+/** The cases list for a spreadsheet: a cell that starts like a formula is made harmless. */
+export function casesCsv(cases: CaseView[]): string {
+  const cell = (v: string | number | null) => {
+    const text = v === null ? '' : String(v);
+    const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+    return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+  };
+  const date = (unix: number | null) =>
+    unix === null ? '' : new Date((unix + 3 * 3600) * 1000).toISOString().slice(0, 10);
+  const rows: (string | number | null)[][] = [
+    [
+      'your_reference',
+      'plate',
+      'chassis_number',
+      'make',
+      'model',
+      'year',
+      'status',
+      'fee_try',
+      'enforcement_office',
+      'file_number',
+      'last_confirmed',
+      'expires',
+      'in_custody',
+    ],
+    ...cases.map((c) => [
+      c.external_ref,
+      c.vehicle.plate,
+      c.vehicle.vin,
+      c.vehicle.make,
+      c.vehicle.model,
+      c.vehicle.year,
+      c.status,
+      (c.fee_kurus / 100).toFixed(2),
+      c.icra_office,
+      c.icra_file_no,
+      date(c.last_confirmed_at),
+      c.status === 'active' || c.status === 'pending_identity' ? date(c.expires_at) : '',
+      date(c.delivered_at),
+    ]),
+  ];
+  return `${rows.map((row) => row.map(cell).join(',')).join('\r\n')}\r\n`;
+}
+
 export function caseList(
   nav: Nav,
   cases: CaseView[],
@@ -351,7 +395,8 @@ export function caseList(
     `<h1>Cases</h1>
      <p class="hint">Most recently changed first.</p>
      ${searchForm}
-     <p class="filters">${filters}</p>${caseTable(org.id, cases, now, empty)}${more}`,
+     <p class="filters">${filters}</p>${caseTable(org.id, cases, now, empty)}${more}
+     ${cases.length ? `<p><a class="button secondary" href="/o/${org.id}/cases.csv${keep('') ? `?${keep('')}` : ''}">${icon('download')}<span>Download this list (CSV)</span></a></p>` : ''}`,
   );
 }
 

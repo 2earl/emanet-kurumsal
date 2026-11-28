@@ -3196,3 +3196,9 @@ ol.progress li.now span {
   color: var(--link);
   font-weight: 600;
 }
+
+/* A message is prose, not code. */
+textarea {
+  font-family: var(--body);
+  line-height: 1.5;
+}

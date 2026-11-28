@@ -15,6 +15,7 @@ import {
 } from './auth';
 import {
   CASE_STATUSES,
+  type CaseView,
   authz,
   type Permission,
   core,
@@ -462,6 +463,36 @@ export function createApp(now: () => number) {
         c.get('now'),
       ),
     );
+  });
+
+  /** The cases list as a file: the same status filter and search, every page of it. */
+  app.get('/o/:org/cases.csv', async (c) => {
+    const status = c.req.query('status');
+    const filter = CASE_STATUSES.includes(status as CaseStatus) ? (status as CaseStatus) : null;
+    const search = (c.req.query('q') ?? '').trim().slice(0, 60);
+    const all: CaseView[] = [];
+    let cursor: string | null = null;
+    // 200 a page, 50 pages: ten thousand cases is more than a spreadsheet is read for.
+    for (let page = 0; page < 50; page++) {
+      const result = await core(c.env).listCases(org(c).orgId, {
+        ...(filter ? { status: filter } : {}),
+        ...(search ? { search } : {}),
+        ...(cursor ? { cursor } : {}),
+        newest: true,
+        limit: 200,
+      });
+      if (!result.ok) throw new Error(`core: ${result.error}`);
+      all.push(...result.value.cases);
+      cursor = result.value.next_cursor;
+      if (!cursor) break;
+    }
+    return new Response(pages.casesCsv(all), {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="emanet-cases.csv"',
+        'Cache-Control': 'private, no-store',
+      },
+    });
   });
 
   async function schemaOf(c: AppContext) {

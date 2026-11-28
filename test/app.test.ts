@@ -186,6 +186,18 @@ describe('pages', () => {
       await request('/o/org-1/cases?status=withdrawn', { headers: { Cookie: member } })
     ).text();
     expect(none2).toContain('No cases with this status.');
+
+    expect(list).toContain('href="/o/org-1/cases.csv"');
+    expect(found).toContain('href="/o/org-1/cases.csv?q=34%20abc%20123"');
+    const file = await request('/o/org-1/cases.csv?q=34%20abc%20123', {
+      headers: { Cookie: member },
+    });
+    expect(file.headers.get('Content-Disposition')).toContain('emanet-cases.csv');
+    const lines = (await file.text()).trim().split('\r\n');
+    expect(lines[0]).toContain('your_reference,plate,chassis_number');
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toContain('R-1,34ABC123,VF1RJA00061234567,Renault,Clio');
+    expect((await request('/o/org-1/cases.csv')).status).toBe(302);
   });
 
   it('reports CSV problems by row and imports nothing', async () => {
