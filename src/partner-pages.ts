@@ -1,4 +1,6 @@
 import type {
+  Ticket,
+  TicketThread,
   CaseDocument,
   CaseDocumentKind,
   InvoiceLine,
@@ -6,6 +8,7 @@ import type {
   Report,
   TimelineEvent,
 } from './core';
+import { icon } from './icons';
 import { data, day, esc, layout, lira, moment, plate, type Nav } from './pages';
 
 /**
@@ -73,6 +76,7 @@ export function invoiceList(nav: Nav, invoices: PartnerInvoice[]): string {
     `<h1>Invoices</h1>
      <p class="lede">One invoice per period for the vehicles that reached custody, due within 15 days. The e-invoice itself comes through the e-Fatura system.</p>
      ${open.length ? `<p class="panel">Open: ${lira(due)}</p>` : ''}
+     ${invoices.length ? `<p><a class="button secondary" href="/o/${esc(org.id)}/invoices.csv">${icon('download')} Download all invoices (CSV)</a></p>` : ''}
      ${
        invoices.length
          ? `<table><thead><tr><th>Issued</th><th>Number</th><th class="num">Vehicles</th><th class="num">Net</th><th class="num">VAT</th><th class="num">Total</th><th>Status</th></tr></thead><tbody>${invoices
@@ -105,6 +109,10 @@ export function invoiceDetail(
        <dt>Paid</dt><dd>${lira(invoice.paid_kurus)}</dd>
        <dt>Status</dt><dd>${INVOICE_STATUS[invoice.status]}</dd>
      </dl></div>
+     <p class="hint">This page lists what is invoiced. The official invoice is the e-invoice (e-Fatura) sent to your accounting. If it has not reached you, ask us.</p>
+     <p class="noprint"><a class="button secondary" href="/o/${esc(org.id)}/invoices/${esc(invoice.id)}/lines.csv">${icon('download')} Download the vehicles (CSV)</a>
+       <a href="/o/${esc(org.id)}/support/new?category=invoice">Ask about this invoice</a></p>
+     <p class="hint noprint">To keep a copy, use your browser’s Print and choose Save as PDF.</p>
      <h2>Vehicles</h2>
      <table><thead><tr><th>Plate</th><th>Your reference</th><th>In custody</th><th class="num">Net</th><th class="num">VAT</th></tr></thead><tbody>${invoice.lines
        .map(
@@ -178,4 +186,152 @@ export function reportCsv(r: Report): string {
     ]),
   ];
   return `${rows.map((row) => row.map(cell).join(',')).join('\r\n')}\r\n`;
+}
+
+/** Quoted for a spreadsheet: a cell that starts like a formula is made harmless. */
+const csvCell = (v: string | number | null) => {
+  const text = v === null ? '' : String(v);
+  const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+};
+const csvDay = (unix: number | null) =>
+  unix === null ? '' : new Date((unix + 3 * 3600) * 1000).toISOString().slice(0, 10);
+const csvLira = (kurus: number) => (kurus / 100).toFixed(2);
+const csvRows = (rows: (string | number | null)[][]) =>
+  `${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}\r\n`;
+
+export function invoicesCsv(invoices: PartnerInvoice[]): string {
+  return csvRows([
+    ['number', 'issued', 'vehicles', 'net_try', 'vat_try', 'total_try', 'paid_try', 'status'],
+    ...invoices.map((i) => [
+      i.number,
+      csvDay(i.issued_at),
+      i.cases,
+      csvLira(i.net_kurus),
+      csvLira(i.kdv_kurus),
+      csvLira(i.total_kurus),
+      csvLira(i.paid_kurus),
+      i.status,
+    ]),
+  ]);
+}
+
+export function invoiceLinesCsv(invoice: PartnerInvoice & { lines: InvoiceLine[] }): string {
+  return csvRows([
+    ['invoice', 'plate', 'your_reference', 'in_custody', 'net_try', 'vat_try'],
+    ...invoice.lines.map((l) => [
+      invoice.number ?? invoice.id,
+      l.plate,
+      l.external_ref,
+      csvDay(l.delivered_at),
+      csvLira(l.net_kurus),
+      csvLira(l.kdv_kurus),
+    ]),
+  ]);
+}
+
+// ---- Support ---------------------------------------------------------------------------------
+
+const CATEGORY_LABEL: Record<string, string> = {
+  case: 'A case or a vehicle',
+  invoice: 'An invoice',
+  integration: 'The API or webhooks',
+  account: 'Our account or team',
+  other: 'Something else',
+};
+const TICKET_LABEL: Record<Ticket['status'], string> = {
+  open: 'Waiting for 2earl',
+  answered: '2earl answered',
+  closed: 'Closed',
+};
+
+export function supportList(
+  nav: Nav,
+  list: Ticket[],
+  canWrite: boolean,
+  saved: string | null,
+): string {
+  const org = nav.org;
+  if (!org) throw new Error('supportList needs an organization');
+  return layout(
+    'Support',
+    { ...nav, current: 'support' },
+    `${saved ? `<p class="notice">${esc(saved)}</p>` : ''}<h1>Support</h1>
+     <p class="lede">Ask 2earl about a case, an invoice or the integration. We answer here and email whoever asked.</p>
+     ${canWrite ? `<p><a class="button" href="/o/${esc(org.id)}/support/new">${icon('plus')} New message</a></p>` : ''}
+     ${
+       list.length
+         ? `<table><thead><tr><th>Subject</th><th>About</th><th>Status</th><th>Updated</th></tr></thead><tbody>${list
+             .map(
+               (t) =>
+                 `<tr><td><a href="/o/${esc(org.id)}/support/${esc(t.id)}">${data(t.subject)}</a></td><td>${CATEGORY_LABEL[t.category] ?? data(t.category)}</td><td>${TICKET_LABEL[t.status]}</td><td>${moment(t.updated_at)}</td></tr>`,
+             )
+             .join('')}</tbody></table>`
+         : '<p class="panel">No messages yet.</p>'
+     }
+     <p class="hint">Never write a password or an API key in a message.</p>`,
+  );
+}
+
+export function supportNew(
+  nav: Nav,
+  values: Record<string, string>,
+  errorText: string | null,
+): string {
+  const org = nav.org;
+  if (!org) throw new Error('supportNew needs an organization');
+  const options = Object.entries(CATEGORY_LABEL)
+    .map(
+      ([k, label]) =>
+        `<option value="${esc(k)}"${values.category === k ? ' selected' : ''}>${label}</option>`,
+    )
+    .join('');
+  return layout(
+    'New message',
+    { ...nav, current: 'support' },
+    `<p><a href="/o/${esc(org.id)}/support">Support</a></p>
+     <h1>New message</h1>
+     ${errorText ? `<p class="error">${esc(errorText)}</p>` : ''}
+     <form method="post" action="/o/${esc(org.id)}/support/new" class="stack">
+       <label>What is it about? <select name="category">${options}</select></label>
+       <label>Subject <input name="subject" required minlength="3" maxlength="120" value="${esc(values.subject ?? '')}"></label>
+       <label>Message <textarea name="message" required minlength="3" maxlength="4000" rows="6">${esc(values.message ?? '')}</textarea></label>
+       <button type="submit">Send</button>
+     </form>`,
+  );
+}
+
+export function supportThread(
+  nav: Nav,
+  t: TicketThread,
+  canWrite: boolean,
+  errorText: string | null,
+  saved: string | null,
+): string {
+  const org = nav.org;
+  if (!org) throw new Error('supportThread needs an organization');
+  const closed = t.ticket.status === 'closed';
+  return layout(
+    t.ticket.subject,
+    { ...nav, current: 'support' },
+    `${saved ? `<p class="notice">${esc(saved)}</p>` : ''}<p><a href="/o/${esc(org.id)}/support">Support</a></p>
+     <h1>${data(t.ticket.subject)}</h1>
+     <p class="hint">${CATEGORY_LABEL[t.ticket.category] ?? data(t.ticket.category)} · ${TICKET_LABEL[t.ticket.status]}</p>
+     <ul class="cards">${t.messages
+       .map(
+         (m) =>
+           `<li class="card${m.author_kind === 'staff' ? ' staff' : ''}"><p class="hint">${m.author_kind === 'staff' ? '2earl' : 'Your team'} · ${moment(m.created_at)}</p><p style="white-space:pre-wrap">${data(m.body)}</p></li>`,
+       )
+       .join('')}</ul>
+     ${errorText ? `<p class="error">${esc(errorText)}</p>` : ''}
+     ${
+       canWrite
+         ? `<form method="post" action="/o/${esc(org.id)}/support/${esc(t.ticket.id)}/reply" class="stack">
+       <label>${closed ? 'Write again to reopen this' : 'Your reply'} <textarea name="message" required minlength="2" maxlength="4000" rows="4"></textarea></label>
+       <button type="submit">Send</button>
+     </form>
+     ${closed ? '' : `<form method="post" action="/o/${esc(org.id)}/support/${esc(t.ticket.id)}/close"><button class="link" type="submit">Close this message, it is solved</button></form>`}`
+         : ''
+     }`,
+  );
 }

@@ -18,6 +18,50 @@ export const tr: Catalog = {
   ],
   monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
   messages: {
+    '<0/> Download all invoices (CSV)': '<0/> Tüm faturaları indir (CSV)',
+    '<0/> Download the vehicles (CSV)': '<0/> Araçları indir (CSV)',
+    'A case or a vehicle': 'Bir dosya ya da araç',
+    'An invoice': 'Bir fatura',
+    'The API or webhooks': 'API ya da webhook’lar',
+    'Our account or team': 'Hesabımız ya da ekibimiz',
+    'Something else': 'Başka bir konu',
+    'Ask 2earl about a case, an invoice or the integration. We answer here and email whoever asked.':
+      '2earl’e bir dosya, fatura ya da entegrasyonla ilgili soru sorun. Yanıtı burada veririz ve soran kişiye e-postayla haber veririz.',
+    'Ask about this invoice': 'Bu fatura hakkında soru sor',
+    'Give your message a title of at least 3 characters.':
+      'Mesajınıza en az 3 karakterlik bir başlık verin.',
+    'Write your message first.': 'Önce mesajınızı yazın.',
+    'Choose what your message is about.': 'Mesajınızın konusunu seçin.',
+    'You have five open messages. Wait for an answer or close one first.':
+      'Beş açık mesajınız var. Bir yanıt bekleyin ya da birini kapatın.',
+    'This message was closed a while ago. Write a new one.':
+      'Bu mesaj bir süre önce kapandı. Yeni bir mesaj yazın.',
+    'Sent. We answer here and email you when we do.':
+      'Gönderildi. Yanıtı burada veririz ve e-postayla haber veririz.',
+    'Sent.': 'Gönderildi.',
+    'Closed.': 'Kapatıldı.',
+    Message: 'Mesaj',
+    Subject: 'Başlık',
+    Send: 'Gönder',
+    Support: 'Destek',
+    'New message': 'Yeni mesaj',
+    'No messages yet.': 'Henüz mesaj yok.',
+    'Never write a password or an API key in a message.':
+      'Mesaja parola ya da API anahtarı yazmayın.',
+    'This page lists what is invoiced. The official invoice is the e-invoice (e-Fatura) sent to your accounting. If it has not reached you, ask us.':
+      'Bu sayfa faturalanan kalemleri listeler. Resmî fatura, muhasebenize gönderilen e-faturadır (e-Fatura). Size ulaşmadıysa bize sorun.',
+    'To keep a copy, use your browser’s Print and choose Save as PDF.':
+      'Kopyasını saklamak için tarayıcınızın Yazdır seçeneğinde PDF olarak kaydet’i seçin.',
+    'What is it about?': 'Konu nedir?',
+    'Waiting for 2earl': '2earl’den yanıt bekleniyor',
+    '2earl answered': '2earl yanıtladı',
+    Closed: 'Kapandı',
+    'Your team': 'Ekibiniz',
+    'Your reply': 'Yanıtınız',
+    'Write again to reopen this': 'Yeniden açmak için yazın',
+    'Close this message, it is solved': 'Bu mesajı kapat, çözüldü',
+    'This message doesn’t exist.': 'Bu mesaj yok.',
+    About: 'Konu',
     // Titles
     '{0} · Emanet Kurumsal': '{0} · Emanet Kurumsal',
     'Vehicle recovery for creditors': 'Alacaklılar için araç bulma',

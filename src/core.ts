@@ -245,6 +245,28 @@ export interface InvoiceLine {
   kdv_kurus: number;
 }
 
+export interface Ticket {
+  id: string;
+  subject: string;
+  category: string;
+  status: 'open' | 'answered' | 'closed';
+  created_at: number;
+  updated_at: number;
+  closed_at: number | null;
+}
+
+export interface TicketMessage {
+  id: string;
+  author_kind: 'requester' | 'staff' | 'note';
+  body: string;
+  created_at: number;
+}
+
+export interface TicketThread {
+  ticket: Ticket;
+  messages: TicketMessage[];
+}
+
 export interface ReportMonth {
   month: string;
   added: number;
@@ -283,6 +305,15 @@ export interface PartnerApi {
     orgId: string,
     invoiceId: string,
   ): Promise<Result<PartnerInvoice & { lines: InvoiceLine[] }>>;
+  openTicket(
+    orgId: string,
+    userId: string,
+    input: { subject: string; category: string; message: string },
+  ): Promise<Result<{ id: string }>>;
+  myTickets(orgId: string): Promise<Result<Ticket[]>>;
+  myTicket(orgId: string, ticketId: string): Promise<Result<TicketThread>>;
+  replyTicket(orgId: string, userId: string, ticketId: string, body: string): Promise<Result<null>>;
+  closeTicket(orgId: string, userId: string, ticketId: string): Promise<Result<null>>;
   report(orgId: string): Promise<Result<Report>>;
   onboardingInvitation(token: string): Promise<Result<InvitationView>>;
   claimOnboarding(token: string, userId: string): Promise<Result<{ id: string }>>;

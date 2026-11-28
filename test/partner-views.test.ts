@@ -67,6 +67,67 @@ describe('what a partner sees', () => {
     );
   });
 
+  it('downloads invoices and their vehicles as CSV', async () => {
+    const auditor = await signIn('auditor-1');
+    const list = await request('/o/org-1/invoices.csv', { headers: { Cookie: auditor } });
+    expect(list.headers.get('Content-Disposition')).toContain('attachment');
+    const rows = (await list.text()).trim().split('\r\n');
+    expect(rows[0]).toBe('number,issued,vehicles,net_try,vat_try,total_try,paid_try,status');
+    expect(rows[1]).toContain('EMN2026000000001');
+    const lines = await request('/o/org-1/invoices/inv-1/lines.csv', {
+      headers: { Cookie: auditor },
+    });
+    expect(await lines.text()).toContain('34ABC123,K-9');
+    expect(
+      (await request('/o/org-1/invoices/nope/lines.csv', { headers: { Cookie: auditor } })).status,
+    ).toBe(404);
+    expect((await request('/o/org-1/invoices.csv')).status).toBe(302);
+    const page = await (
+      await request('/o/org-1/invoices/inv-1', { headers: { Cookie: auditor } })
+    ).text();
+    expect(page).toContain('e-invoice (e-Fatura)');
+    expect(page).toContain('/support/new?category=invoice');
+  });
+
+  it('lets a company write to support; an auditor only reads', async () => {
+    const member = await signIn('member-1');
+    expect(
+      await (await request('/o/org-1/support', { headers: { Cookie: member } })).text(),
+    ).toContain('No messages yet.');
+    const bad = await post('/o/org-1/support/new', member, {
+      subject: 'x',
+      category: 'invoice',
+      message: 'Where is it?',
+    });
+    expect(bad.status).toBe(422);
+    const sent = await post('/o/org-1/support/new', member, {
+      subject: 'Invoice question',
+      category: 'invoice',
+      message: 'Where is the e-invoice?',
+    });
+    expect(sent.status).toBe(303);
+    const where = (sent.headers.get('Location') ?? '').split('?')[0] ?? '';
+    expect(sent.headers.get('Location')).toMatch(/\/support\/tk-\d+\?done=ticket_sent$/);
+    await coreHooks().testStaffReply(where.split('/').pop() ?? '', 'It is on its way.');
+    const thread = await (await request(where, { headers: { Cookie: member } })).text();
+    expect(thread).toContain('It is on its way.');
+    expect(thread).toContain('2earl answered');
+    const reply = await post(`${where}/reply`, member, { message: 'Thanks' });
+    expect(reply.headers.get('Location')).toBe(`${where}?done=ticket_replied`);
+
+    const auditor = await signIn('auditor-1');
+    expect((await request(where, { headers: { Cookie: auditor } })).status).toBe(200);
+    expect((await post(`${where}/reply`, auditor, { message: 'Hello there' })).status).toBe(403);
+    expect((await request('/o/org-1/support/new', { headers: { Cookie: auditor } })).status).toBe(
+      403,
+    );
+    const closed = await post(`${where}/close`, member, {});
+    expect(closed.headers.get('Location')).toBe('/o/org-1/support?done=ticket_closed');
+    expect((await request('/o/org-1/support/nope', { headers: { Cookie: member } })).status).toBe(
+      404,
+    );
+  });
+
   it('reports by month and city, and as CSV a spreadsheet can’t run', async () => {
     const member = await signIn('member-1');
     const page = await (await request('/o/org-1/reports', { headers: { Cookie: member } })).text();

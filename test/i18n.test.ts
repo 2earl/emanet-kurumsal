@@ -281,6 +281,9 @@ describe('Turkish', () => {
     await get('/o/org-1/invoices', member);
     await get('/o/org-1/invoices/inv-1', member);
     await get('/o/org-1/invoices/nope', member);
+    await get('/o/org-1/support', member);
+    await get('/o/org-1/support/new', member);
+    await send('/o/org-1/support/new', member, { subject: 'x', category: 'invoice', message: 'y' });
     await get('/o/org-1/reports', member);
     await send('/o/org-1/cases/new', member, {
       external_ref: 'TR-DOC',
