@@ -298,6 +298,40 @@ export interface Report {
 }
 
 /** The core's PartnerApi, as reached over the CORE Service Binding. */
+
+export const REQUEST_KINDS = ['bank', 'vys', 'law_firm', 'leasing', 'other'] as const;
+export const REQUEST_VOLUMES = ['small', 'medium', 'large'] as const;
+
+export interface InvitationRequestInput {
+  company: string;
+  kind: string;
+  contactName: string;
+  contactEmail: string;
+  phone?: string;
+  jobTitle?: string;
+  volume?: string;
+  message?: string;
+  locale?: string;
+}
+
+/** core src/invitation-requests.ts OwnRequest. */
+export interface OwnInvitationRequest {
+  id: string;
+  company: string;
+  kind: (typeof REQUEST_KINDS)[number];
+  contact_name: string;
+  contact_email: string;
+  phone: string | null;
+  job_title: string | null;
+  volume: (typeof REQUEST_VOLUMES)[number] | null;
+  message: string | null;
+  locale: 'tr' | 'en';
+  status: 'new' | 'invited' | 'declined';
+  handled_at: number | null;
+  onboarding_id: string | null;
+  created_at: number;
+}
+
 export interface PartnerApi {
   /** An unexpected error: a route pattern and an error's name, for staff's System page. */
   reportError(event: string, detail: string): Promise<void>;
@@ -351,6 +385,10 @@ export interface PartnerApi {
   onboardingInvitation(token: string): Promise<Result<InvitationView>>;
   claimOnboarding(token: string, userId: string): Promise<Result<{ id: string }>>;
   myOnboardings(userId: string): Promise<Result<Onboarding[]>>;
+  /** Ask 2earl for an invitation (no organization yet). One open request per account. */
+  requestInvitation(userId: string, input: InvitationRequestInput): Promise<Result<{ id: string }>>;
+  /** The account's latest request, never the staff note. */
+  myInvitationRequest(userId: string): Promise<Result<OwnInvitationRequest | null>>;
   onboarding(id: string, userId: string): Promise<Result<Onboarding>>;
   linkOnboardingOrganization(id: string, userId: string, orgId: string): Promise<Result<null>>;
   saveOnboardingDetails(

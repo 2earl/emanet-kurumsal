@@ -20,10 +20,14 @@ const MEMBERS = {
   'auditor-1': [['org-1', 'Test Bankası', 'auditor']],
   'invited-1': [['org-3', 'Yeni Varlık', 'owner']],
   'outsider': [],
+  'asker-1': [],
+  'asker-2': [],
+  'asker-3': [],
+  'asker-4': [],
 };
 const base = (uid) => uid.split('!')[0];
 // Accounts joining Emanet, by the address they sign in with; organizations created for them.
-const ADDRESSES = { 'joiner-1': 'ops@bank.example', 'joiner-2': 'ops2@bank.example', 'owner-1': 'owner@bank.example' };
+const ADDRESSES = { 'joiner-1': 'ops@bank.example', 'joiner-2': 'ops2@bank.example', 'owner-1': 'owner@bank.example', 'asker-1': 'zeynep@firma.example', 'asker-2': 'ali@firma.example', 'asker-3': 'a3@firma.example', 'asker-4': 'a4@firma.example' };
 const created = [];
 const members = (uid) => [...(MEMBERS[base(uid)] ?? []), ...created.filter(([u]) => u === base(uid)).map(([, o, n]) => [o, n, 'owner'])];
 export class OrganizationDirectory extends WorkerEntrypoint {
@@ -282,6 +286,9 @@ export class PartnerApi extends WorkerEntrypoint {
 
   // Onboarding, as src/core.ts describes it; a token is 43 characters.
   async testDraftOnly(value) { draftOnly = value; }
+  async testHandleRequest(uid, status) {
+    for (const r of invitationRequests.values()) if (r.user_id === uid && r.status === 'new') { r.status = status; r.handled_at = now(); }
+  }
   async testInvite(email) {
     const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '').slice(0, 43);
     const id = crypto.randomUUID();
@@ -305,6 +312,25 @@ export class PartnerApi extends WorkerEntrypoint {
     if (o.claimed_by && o.claimed_by !== uid) return fail('claimed_by_another');
     o.claimed_by = uid; if (o.status === 'invited') o.status = 'in_progress';
     return ok({ id: o.id });
+  }
+  async requestInvitation(uid, input) {
+    const mine = [...invitationRequests.values()].filter((r) => r.user_id === uid);
+    if (mine.some((r) => r.status === 'new')) return fail('already_requested');
+    if (!input.company || input.company.length < 2) return fail('missing_company');
+    if (!['bank', 'vys', 'law_firm', 'leasing', 'other'].includes(input.kind)) return fail('invalid_kind');
+    if (!input.contactName || input.contactName.length < 3) return fail('missing_contact');
+    const id = crypto.randomUUID();
+    invitationRequests.set(id, { id, user_id: uid, company: input.company, kind: input.kind,
+      contact_name: input.contactName, contact_email: input.contactEmail.toLowerCase(),
+      phone: input.phone || null, job_title: input.jobTitle || null, volume: input.volume || null,
+      message: input.message || null, locale: input.locale, status: 'new', handled_at: null,
+      onboarding_id: null, created_at: now() + invitationRequests.size });
+    return ok({ id });
+  }
+  async myInvitationRequest(uid) {
+    const mine = [...invitationRequests.values()].filter((r) => r.user_id === uid)
+      .sort((a, b) => b.created_at - a.created_at);
+    return ok(mine[0] ?? null);
   }
   async myOnboardings(uid) {
     return ok([...onboardings.values()].filter((o) => o.claimed_by === uid).map(({ token, ...o }) => o));
@@ -362,6 +388,7 @@ export class PartnerApi extends WorkerEntrypoint {
 }
 const tickets = new Map();
 const onboardings = new Map();
+const invitationRequests = new Map();
 let draftOnly = false;
 export default { fetch() { return new Response(null, { status: 404 }); } };
 `;

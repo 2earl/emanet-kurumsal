@@ -167,6 +167,44 @@ describe('Turkish', () => {
     expect([...missing].sort()).toEqual([]);
   });
 
+  it('serves the invitation request pages without an untranslated sentence', async () => {
+    const missing = collectMissing();
+    const send = (cookie: string, body: Record<string, string>) =>
+      request('/request', {
+        method: 'POST',
+        headers: {
+          ...tr,
+          Cookie: cookie,
+          Origin: ORIGIN,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(body).toString(),
+      }).then((r) => r.text());
+    const get = (path: string, cookie: string) =>
+      request(path, { headers: { ...tr, Cookie: cookie } }).then((r) => r.text());
+    const form = (email: string) => ({
+      company: 'Firma A.Ş.',
+      kind: 'bank',
+      contactName: 'Zeynep Kaya',
+      contactEmail: email,
+    });
+    for (const [uid, email, end] of [
+      ['asker-3', 'a3@firma.example', 'invited'],
+      ['asker-4', 'a4@firma.example', 'declined'],
+    ] as const) {
+      const cookie = await signIn(uid);
+      await get('/', cookie);
+      await get('/request', cookie);
+      await send(cookie, form('x@else.example'));
+      await send(cookie, { ...form(email), kind: '' });
+      await send(cookie, form(email));
+      await get('/?requested=1', cookie);
+      await coreHooks().testHandleRequest(uid, end);
+      await get('/', cookie);
+    }
+    expect([...missing].sort()).toEqual([]);
+  });
+
   it('serves the onboarding pages without an untranslated sentence', async () => {
     const missing = collectMissing();
     const get = async (path: string, cookie = '') =>

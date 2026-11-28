@@ -18,6 +18,76 @@ export const tr: Catalog = {
   ],
   monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
   messages: {
+    '100 to 1,000 vehicles a year': 'Yılda 100 ile 1.000 araç',
+    '2earl couldn’t go ahead with your request for <0/> for now. If something has changed, you can ask again.':
+      '2earl, <0/> için isteğinizle şimdilik ilerleyemedi. Durum değiştiyse yeniden isteyebilirsiniz.',
+    '2earl sent an invitation to <0/>. Open the link in that email while signed in to this account to set up your organization.':
+      '2earl, <0/> adresine bir davet gönderdi. Kurumunuzu kurmak için bu hesapla oturum açıkken e-postadaki bağlantıyı açın.',
+    '2earl uses what you write here only to answer your request. It is deleted a year after the team answers, or when you delete your 2earl account.':
+      '2earl buraya yazdıklarınızı yalnızca isteğinizi yanıtlamak için kullanır. Ekip yanıtladıktan bir yıl sonra ya da 2earl hesabınızı sildiğinizde silinir.',
+    '2earl’s team reads your request and answers by email.':
+      '2earl ekibi isteğinizi okur ve e-postayla yanıtlar.',
+    '2earl’s team will answer by email. You don’t need to do anything until then.':
+      '2earl ekibi e-postayla yanıt verecek. O zamana kadar bir şey yapmanız gerekmiyor.',
+    'Already on Emanet?': 'Kurumunuz zaten Emanet’te mi?',
+    'An address on your 2earl account: the invitation will be sent to it.':
+      '2earl hesabınızdaki bir adres: davet bu adrese gönderilir.',
+    'Answer goes to': 'Yanıtın gideceği adres',
+    'Anything 2earl should know (optional)': '2earl’ün bilmesi gerekenler (isteğe bağlı)',
+    'Ask 2earl for an invitation': '2earl’den davet isteyin',
+    'Ask again': 'Yeniden iste',
+    'Ask for an invitation': 'Davet iste',
+    Back: 'Geri',
+    Bank: 'Banka',
+    'Choose what kind of organization it is.': 'Kurumun türünü seçin.',
+    'Choose…': 'Seçin…',
+    'Emanet is for organizations that hold seizure orders on vehicles: banks, wealth management companies, law firms and leasing companies. Tell 2earl about yours and the team will answer by email.':
+      'Emanet, araçlar üzerinde yakalama şerhi bulunan kurumlar içindir: bankalar, varlık yönetim şirketleri, hukuk büroları ve leasing şirketleri. Kurumunuzu 2earl’e anlatın; ekip e-postayla yanıt verir.',
+    'How many vehicles a year, roughly? (optional)': 'Yılda yaklaşık kaç araç? (isteğe bağlı)',
+    'If Emanet fits, you get an invitation to set up your organization: company details, documents and the agreement.':
+      'Emanet uygunsa kurumunuzu kurmanız için bir davet alırsınız: şirket bilgileri, belgeler ve sözleşme.',
+    'If your organization already uses Emanet, ask its administrator to add you to it in your 2earl organization. Then sign in again.':
+      'Kurumunuz Emanet’i zaten kullanıyorsa yöneticisinden sizi 2earl kurumuna eklemesini isteyin. Sonra yeniden oturum açın.',
+    'Job title (optional)': 'Unvan (isteğe bağlı)',
+    'Law firm': 'Hukuk bürosu',
+    'Leasing company': 'Leasing şirketi',
+    'More than 1,000 vehicles a year': 'Yılda 1.000 araçtan fazla',
+    'No email? Look in the spam folder, or write to <0>iletisim@emanet.dev</0>.':
+      'E-posta gelmedi mi? İstenmeyen klasörüne bakın ya da <0>iletisim@emanet.dev</0> adresine yazın.',
+    'Not sure': 'Emin değilim',
+    'Only organizations 2earl has set up can use Emanet. Tell us about yours.':
+      'Emanet’i yalnızca 2earl’ün kurduğu kurumlar kullanabilir. Bize kurumunuzu anlatın.',
+    'Phone (optional)': 'Telefon (isteğe bağlı)',
+    'Request sent. We emailed you a copy.':
+      'İstek gönderildi. Bir kopyasını size e-postayla gönderdik.',
+    'Send request': 'İsteği gönder',
+    Sent: 'Gönderildi',
+    'Up to 100 vehicles a year': 'Yılda 100 araca kadar',
+    'Use an email address on your 2earl account: the invitation will be sent to it. You can add one in your 2earl account settings.':
+      '2earl hesabınızdaki bir e-posta adresini kullanın: davet bu adrese gönderilir. 2earl hesap ayarlarınızdan adres ekleyebilirsiniz.',
+    'We have your request': 'İsteğinizi aldık',
+    'Asset management company (VYŞ)': 'Varlık yönetim şirketi (VYŞ)',
+    'What happens next': 'Sonra ne olur',
+    'What kind of organization?': 'Kurumun türü',
+    'Your account isn’t part of an organization that uses Emanet.':
+      'Hesabınız Emanet’i kullanan bir kurumun üyesi değil.',
+    'Your invitation is on its way': 'Davetiniz yolda',
+    'Your organization can add vehicles once 2earl approves it.':
+      '2earl onayladıktan sonra kurumunuz araç ekleyebilir.',
+    'Your organization isn’t on Emanet yet? <0>Ask for an invitation</0>.':
+      'Kurumunuz henüz Emanet’te değil mi? <0>Davet isteyin</0>.',
+    'Your work email': 'İş e-postanız',
+    'Write your organization’s name.': 'Kurumunuzun adını yazın.',
+    'Write your full name.': 'Adınızı ve soyadınızı yazın.',
+    'Write a valid email address.': 'Geçerli bir e-posta adresi yazın.',
+    'Write the phone number with digits only, for example +90 212 555 00 00.':
+      'Telefon numarasını yalnızca rakamlarla yazın, örneğin +90 212 555 00 00.',
+    'Choose how many vehicles, or leave it empty.': 'Araç sayısını seçin ya da boş bırakın.',
+    'You have already sent a request. 2earl’s team will answer it by email.':
+      'Zaten bir istek gönderdiniz. 2earl ekibi e-postayla yanıtlayacak.',
+    'You have sent three requests in the last 30 days. Try again later.':
+      'Son 30 günde üç istek gönderdiniz. Daha sonra yeniden deneyin.',
+    'The request couldn’t be sent. Try again.': 'İstek gönderilemedi. Yeniden deneyin.',
     'Attach at most three files.': 'En çok üç dosya ekleyin.',
     'A file is larger than 10 MB.': 'Bir dosya 10 MB’tan büyük.',
     'Attach photos (JPEG, PNG, WebP, HEIC) or PDF files only.':
