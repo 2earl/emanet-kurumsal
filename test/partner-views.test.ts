@@ -86,7 +86,18 @@ describe('what a partner sees', () => {
       await request('/o/org-1/invoices/inv-1', { headers: { Cookie: auditor } })
     ).text();
     expect(page).toContain('e-invoice (e-Fatura)');
-    expect(page).toContain('/support/new?category=invoice');
+    expect(page).not.toContain('Ask about this invoice');
+    const member = await signIn('member-1');
+    const asked = await (
+      await request('/o/org-1/invoices/inv-1', { headers: { Cookie: member } })
+    ).text();
+    expect(asked).toContain('/support/new?category=invoice&amp;about=EMN2026000000001');
+    const form = await (
+      await request('/o/org-1/support/new?category=invoice&about=EMN2026000000001', {
+        headers: { Cookie: member },
+      })
+    ).text();
+    expect(form).toContain('value="EMN2026000000001"');
   });
 
   it('lets a company write to support; an auditor only reads', async () => {

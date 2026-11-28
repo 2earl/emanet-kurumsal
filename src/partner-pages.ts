@@ -40,6 +40,7 @@ export function caseExtras(
   caseId: string,
   events: { event: TimelineEvent; at: number }[],
   documents: CaseDocument[],
+  canAsk: boolean,
 ): string {
   const timeline = events.length
     ? `<h2>What happened</h2><ol class="timeline">${events
@@ -56,7 +57,10 @@ export function caseExtras(
          )
          .join('')}</tbody></table>`
     : '';
-  return timeline + docs;
+  const ask = !canAsk
+    ? ''
+    : `<p class="noprint"><a href="/o/${esc(orgId)}/support/new?category=case&amp;about=${encodeURIComponent(caseId)}">Ask about this case</a></p>`;
+  return timeline + docs + ask;
 }
 
 const INVOICE_STATUS: Record<PartnerInvoice['status'], string> = {
@@ -111,7 +115,7 @@ export function invoiceDetail(
      </dl></div>
      <p class="hint">This page lists what is invoiced. The official invoice is the e-invoice (e-Fatura) sent to your accounting. If it has not reached you, ask us.</p>
      <p class="noprint"><a class="button secondary" href="/o/${esc(org.id)}/invoices/${esc(invoice.id)}/lines.csv">${icon('download')} Download the vehicles (CSV)</a>
-       <a href="/o/${esc(org.id)}/support/new?category=invoice">Ask about this invoice</a></p>
+       ${org.role === 'auditor' ? '' : `<a href="/o/${esc(org.id)}/support/new?category=invoice&amp;about=${encodeURIComponent(invoice.number ?? invoice.id)}">Ask about this invoice</a>`}</p>
      <p class="hint noprint">To keep a copy, use your browser’s Print and choose Save as PDF.</p>
      <h2>Vehicles</h2>
      <table><thead><tr><th>Plate</th><th>Your reference</th><th>In custody</th><th class="num">Net</th><th class="num">VAT</th></tr></thead><tbody>${invoice.lines
