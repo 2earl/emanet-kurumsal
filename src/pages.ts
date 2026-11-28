@@ -1,5 +1,6 @@
 import type { CaseStatus, CaseView, FieldDefinition, OrgRole, Province } from './core';
 import { PLACE_KINDS } from './core';
+import { card, facts, pageHead, split, stat, stats, tabs, wrapTables } from './dash';
 import { icon, scene, type IconName } from './icons';
 import { currentLocale, languageSwitcher } from './i18n';
 import { KEY_SCOPES, type ApiKey } from './keys';
@@ -82,26 +83,62 @@ export const day = (unix: number | null) =>
 export const moment = (unix: number) =>
   `<time translate="no">${turkey(unix).slice(0, 16).replace('T', ' ')}</time>`;
 
+const ROLE_NAME: Record<OrgRole, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  member: 'Member',
+  auditor: 'Auditor',
+};
+
+const SECTION_NAME: Record<NonNullable<Nav['current']>, string> = {
+  dashboard: 'Overview',
+  cases: 'Cases',
+  new: 'Add a vehicle',
+  upload: 'Upload CSV',
+  invoices: 'Invoices',
+  reports: 'Reports',
+  integrations: 'Integrations',
+  support: 'Support',
+};
+
+/**
+ * Every page (2earl dashboard layout): the organization and its sections in a rail on the left (a
+ * menu on a phone), a top bar with where you are, the case search and the one quick action.
+ */
 export function layout(title: string, nav: Nav, body: string): string {
   const org = nav.org;
-  const link = (key: NonNullable<Nav['current']>, href: string, label: string, glyph: IconName) =>
-    `<a href="${href}"${nav.current === key ? ' aria-current="page"' : ''}>${icon(glyph)}<span>${label}</span></a>`;
+  const writer = org ? org.role !== 'auditor' : false;
+  const link = (key: NonNullable<Nav['current']>, href: string, glyph: IconName, extra = '') =>
+    `<a href="${href}"${nav.current === key ? ' aria-current="page"' : ''}>${icon(glyph)}<span>${SECTION_NAME[key]}</span>${extra}</a>`;
+  const group = (label: string) => `<span class="group">${label}</span>`;
   const orgNav = org
-    ? `<nav aria-label="Sections">
-        ${link('dashboard', `/o/${org.id}`, 'Overview', 'home')}
-        ${link('cases', `/o/${org.id}/cases`, 'Cases', 'folder')}
-        ${org.role === 'auditor' ? '' : link('new', `/o/${org.id}/cases/new`, 'Add a vehicle', 'plus')}
-        ${org.role === 'auditor' ? '' : link('upload', `/o/${org.id}/upload`, 'Upload CSV', 'upload')}
-        ${link('invoices', `/o/${org.id}/invoices`, 'Invoices', 'invoice')}
-        ${link('reports', `/o/${org.id}/reports`, 'Reports', 'chart')}
-        ${link('support', `/o/${org.id}/support`, 'Support', 'mail')}
-        ${org.role === 'owner' || org.role === 'admin' ? link('integrations', `/o/${org.id}/keys`, 'Integrations', 'plug') : ''}
+    ? `<a class="org" href="/" title="Switch organization"><span>Organization</span><strong translate="no">${esc(org.name)}</strong></a>
+      <nav aria-label="Sections">
+        ${group('Cases')}
+        ${link('dashboard', `/o/${org.id}`, 'home')}
+        ${link('cases', `/o/${org.id}/cases`, 'folder')}
+        ${writer ? link('new', `/o/${org.id}/cases/new`, 'plus') : ''}
+        ${writer ? link('upload', `/o/${org.id}/upload`, 'upload') : ''}
+        ${group('Money')}
+        ${link('invoices', `/o/${org.id}/invoices`, 'invoice')}
+        ${link('reports', `/o/${org.id}/reports`, 'chart')}
+        ${group('Help')}
+        ${link('support', `/o/${org.id}/support`, 'mail', nav.answers ? ` <span class="count" translate="no">${String(nav.answers)}</span>` : '')}
+        ${org.role === 'owner' || org.role === 'admin' ? link('integrations', `/o/${org.id}/keys`, 'plug') : ''}
+        <a href="/docs/api">${icon('code')}<span>API documentation</span></a>
       </nav>`
     : '';
-  const who = nav.signedIn
-    ? `<div class="who">${org ? `<a href="/" title="Switch organization">${data(org.name)}</a>` : ''}
+  const account = nav.signedIn
+    ? `<div class="account">${org ? `<span><span class="who-name" translate="no">${esc(org.name)}</span><span class="who-role">${ROLE_NAME[org.role]}</span></span>` : ''}
         <form method="post" action="/signout"><button class="link" type="submit">Sign out</button></form></div>`
-    : `<div class="who"><a class="button" href="/signin">Sign in</a></div>`;
+    : `<div class="account"><a class="button" href="/signin">Sign in</a></div>`;
+  const topbar = org
+    ? `<div class="topbar"><p class="where">${nav.current ? `<strong>${SECTION_NAME[nav.current]}</strong>` : ''}</p>
+        <div class="tools">
+          <form class="search" method="get" action="/o/${esc(org.id)}/cases" role="search"><label><span class="visually-hidden">Find a case</span>${icon('search')}<input name="q" type="search" maxlength="60" placeholder="Plate, chassis number or reference" autocomplete="off" spellcheck="false"></label></form>
+          ${writer && nav.current !== 'new' ? `<a class="button" href="/o/${esc(org.id)}/cases/new">${icon('plus')}<span>Add a vehicle</span></a>` : ''}
+        </div></div>`
+    : '';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -112,35 +149,42 @@ export function layout(title: string, nav: Nav, body: string): string {
 <link rel="stylesheet" href="/app.css">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
-<body>
+<body class="shell">
 <a class="skip" href="#main">Skip to content</a>
-<header class="bar">
+<header class="rail">
   <a class="brand" href="/">${MARK}<span translate="no">Emanet Kurumsal</span></a>
-  ${orgNav}
-  ${who}
+  ${
+    org
+      ? `<details class="menu"><summary>${icon('menu')}<span>Menu</span></summary></details><div class="menu-body">${orgNav}${account}</div>`
+      : account
+  }
 </header>
+<div class="frame">
+${topbar}
 <main id="main">
 ${
   org && nav.answers && nav.current !== 'support'
     ? `<a class="ask-banner" href="/o/${esc(org.id)}/support">${icon('mail')}<span><strong>2earl answered your message</strong> Read the answer</span></a>`
     : ''
 }
-${body}
+${wrapTables(body)}
 </main>
 <footer>
   <span>Emanet is a private service of 2earl, not a public authority.</span>
   <span><a href="https://emanet.dev/gizlilik">Privacy notice</a> · <a href="https://emanet.dev/kullanim-sartlari">Terms of use</a> · <a href="https://emanet.dev/cerezler">Cookies</a> · <a href="mailto:iletisim@emanet.dev">Contact</a> · <a href="/docs/api">API</a></span>
   ${languageSwitcher()}
 </footer>
+</div>
 </body>
 </html>`;
 }
 
 /** API keys and webhooks: one section, two pages. */
 function integrationTabs(orgId: string, current: 'keys' | 'webhooks'): string {
-  const tab = (key: 'keys' | 'webhooks', label: string) =>
-    `<a href="/o/${esc(orgId)}/${key}"${current === key ? ' aria-current="page"' : ''}>${label}</a>`;
-  return `<nav class="tabs" aria-label="Integrations">${tab('keys', 'API keys')}${tab('webhooks', 'Webhooks')}</nav>`;
+  return tabs('Integrations', [
+    { href: `/o/${esc(orgId)}/keys`, label: 'API keys', current: current === 'keys' },
+    { href: `/o/${esc(orgId)}/webhooks`, label: 'Webhooks', current: current === 'webhooks' },
+  ]);
 }
 
 /**
@@ -222,54 +266,82 @@ export function dashboard(
 ): string {
   const org = nav.org;
   if (!org) throw new Error('dashboard needs an organization');
-  const tiles = (['active', 'pending_identity', 'delivered', 'expired', 'withdrawn'] as const)
-    .map(
-      (s) =>
-        `<a class="tile ${s}" href="/o/${org.id}/cases?status=${s}">${icon(STATUS_ICON[s])}<strong translate="no">${String(counts[s])}</strong><span>${STATUS_LABEL[s]}</span></a>`,
-    )
-    .join('');
+  const tone: Record<CaseStatus, 'good' | 'wait' | 'info' | 'alert' | 'quiet'> = {
+    active: 'good',
+    pending_identity: 'wait',
+    delivered: 'info',
+    expired: 'alert',
+    withdrawn: 'quiet',
+  };
+  const tiles = stats(
+    (['active', 'pending_identity', 'delivered', 'expired', 'withdrawn'] as const).map((s) =>
+      stat({
+        label: STATUS_LABEL[s],
+        value: String(counts[s]),
+        tone: counts[s] === 0 ? 'quiet' : tone[s],
+        href: `/o/${org.id}/cases?status=${s}`,
+        icon: icon(STATUS_ICON[s]),
+      }),
+    ),
+  );
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const actions = canWrite
-    ? `<p class="actions"><a class="button" href="/o/${org.id}/cases/new">${icon('plus')}<span>Add a vehicle</span></a> <a class="button secondary" href="/o/${org.id}/upload">${icon('upload')}<span>Upload CSV</span></a> <a class="button secondary" href="/docs/api">${icon('code')}<span>API</span></a></p>`
+    ? `<a class="button secondary" href="/o/${org.id}/upload">${icon('upload')}<span>Upload CSV</span></a><a class="button secondary" href="/docs/api">${icon('code')}<span>API</span></a>`
     : '';
-  const soon = expiring.length
-    ? `<h2>Expiring within three days</h2>
-       <p class="hint">Agents stop looking when a case expires. Confirm the ones whose seizure order still stands.</p>
-       ${
-         canWrite
-           ? `<form method="post" action="/o/${org.id}/cases/confirm" class="stack">
-                <table><thead><tr><th><span class="visually-hidden">Choose</span></th><th>Plate</th><th>Your reference</th><th>Expires</th></tr></thead><tbody>${expiring
-                  .map(
-                    (c) =>
-                      `<tr><td><input type="checkbox" name="case_ids" value="${esc(c.id)}" checked aria-label="${esc(c.vehicle.plate)}"></td><td><a href="/o/${org.id}/cases/${c.id}">${plate(c.vehicle.plate)}</a></td><td>${data(c.external_ref)}</td><td>${day(c.expires_at)}</td></tr>`,
-                  )
-                  .join('')}</tbody></table>
-                <div><button type="submit">Confirm the chosen cases</button></div>
-              </form>`
-           : caseTable(org.id, expiring)
-       }`
+  const soon = card({
+    title: 'Expiring within three days',
+    ...(expiring.length ? { count: String(expiring.length) } : {}),
+    flush: true,
+    body: expiring.length
+      ? canWrite
+        ? `<form method="post" action="/o/${org.id}/cases/confirm">
+             <ul class="rows">${expiring
+               .map(
+                 (c) =>
+                   `<li><label class="row-check"><input type="checkbox" name="case_ids" value="${esc(c.id)}" checked aria-label="${esc(c.vehicle.plate)}"></label><span class="row-text"><a href="/o/${org.id}/cases/${c.id}">${plate(c.vehicle.plate)}</a><span translate="no">${esc(c.external_ref)}</span></span><span class="row-end">${day(c.expires_at)}</span></li>`,
+               )
+               .join('')}</ul>
+             <div class="card-foot"><span>Agents stop looking when a case expires.</span><button type="submit">Confirm the chosen cases</button></div>
+           </form>`
+        : `<ul class="rows">${expiring
+            .map(
+              (c) =>
+                `<li><span class="row-text"><a href="/o/${org.id}/cases/${c.id}">${plate(c.vehicle.plate)}</a><span translate="no">${esc(c.external_ref)}</span></span><span class="row-end">${day(c.expires_at)}</span></li>`,
+            )
+            .join('')}</ul>`
+      : '<p>Nothing expires in the next three days.</p>',
+  });
+  const start = canWrite
+    ? card({
+        title: 'Send vehicles',
+        flush: true,
+        body: `<ul class="rows">
+          <li><a class="row-link" href="/o/${org.id}/cases/new"><span class="row-icon">${icon('plus')}</span><span class="row-text"><strong>Add a vehicle</strong><span>One case, with the form</span></span></a></li>
+          <li><a class="row-link" href="/o/${org.id}/upload"><span class="row-icon">${icon('upload')}</span><span class="row-text"><strong>Upload CSV</strong><span>Many cases at once</span></span></a></li>
+          <li><a class="row-link" href="/docs/api"><span class="row-icon">${icon('code')}</span><span class="row-text"><strong>API</strong><span>Straight from your systems</span></span></a></li>
+        </ul>`,
+      })
     : '';
   return layout(
     'Overview',
     { ...nav, current: 'dashboard' },
     `${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
-     <h1>Overview</h1>
-     <p class="lede">Cases stay searchable for as long as you confirm them. Confirm them again, or send them again, before they expire.</p>
-     ${actions}
-     ${
-       total > 0
-         ? `<form method="get" action="/o/${org.id}/cases" class="inline search" role="search">
-             <label>Find a case: plate, chassis number or your reference <input name="q" type="search" maxlength="60" autocomplete="off" spellcheck="false"></label>
-             <button class="secondary" type="submit">Find</button>
-           </form>`
-         : ''
-     }
-     <div class="counts">${tiles}</div>
-     ${soon}
+     ${pageHead({
+       title: 'Overview',
+       lede: 'Cases stay searchable for as long as you confirm them. Confirm them again, or send them again, before they expire.',
+       ...(actions ? { actions } : {}),
+     })}
+     ${tiles}
      ${
        total === 0
          ? `<div class="panel empty">${scene('plate')}<h2>No vehicles yet</h2><p>Add your first vehicle with the form, upload a CSV file, or connect your systems with the <a href="/docs/api">API</a>.</p></div>`
-         : `<h2>Recently changed</h2>${caseTable(org.id, recent)}`
+         : `${start ? `<div class="cols-2">${soon}${start}</div>` : soon}
+           ${card({
+             title: 'Recently changed',
+             tools: `<a class="button secondary" href="/o/${org.id}/cases">See all cases</a>`,
+             flush: true,
+             body: `<div class="table-wrap">${caseTable(org.id, recent)}</div>`,
+           })}`
      }`,
   );
 }
@@ -368,19 +440,24 @@ export function caseList(
     [filter ? `status=${filter}` : '', search ? `q=${encodeURIComponent(search)}` : '', extra]
       .filter(Boolean)
       .join('&amp;');
-  const filters = [
-    `<a href="/o/${org.id}/cases${search ? `?q=${encodeURIComponent(search)}` : ''}"${filter === null ? ' aria-current="page"' : ''}>All</a>`,
-    ...(['active', 'pending_identity', 'delivered', 'expired', 'withdrawn'] as const).map(
-      (s) =>
-        `<a href="/o/${org.id}/cases?status=${s}${search ? `&amp;q=${encodeURIComponent(search)}` : ''}"${filter === s ? ' aria-current="page"' : ''}>${STATUS_LABEL[s]}</a>`,
-    ),
-  ].join(' · ');
+  const filters = tabs('Cases by status', [
+    {
+      href: `/o/${org.id}/cases${search ? `?q=${encodeURIComponent(search)}` : ''}`,
+      label: 'All',
+      current: filter === null,
+    },
+    ...(['active', 'pending_identity', 'delivered', 'expired', 'withdrawn'] as const).map((st) => ({
+      href: `/o/${org.id}/cases?status=${st}${search ? `&amp;q=${encodeURIComponent(search)}` : ''}`,
+      label: STATUS_LABEL[st],
+      current: filter === st,
+    })),
+  ]);
   const more = next
-    ? `<p><a class="button secondary" href="/o/${org.id}/cases?${keep(`cursor=${encodeURIComponent(next)}`)}">Next page</a></p>`
+    ? `<a class="button secondary" href="/o/${org.id}/cases?${keep(`cursor=${encodeURIComponent(next)}`)}">Next page</a>`
     : '';
-  const searchForm = `<form method="get" action="/o/${org.id}/cases" class="inline search" role="search">
+  const searchForm = `<form method="get" action="/o/${org.id}/cases" role="search">
       ${filter ? `<input type="hidden" name="status" value="${esc(filter)}">` : ''}
-      <label>Plate, chassis number or your reference <input name="q" type="search" maxlength="60" value="${esc(search)}" autocomplete="off" spellcheck="false"></label>
+      <label><span class="visually-hidden">Plate, chassis number or your reference</span><input name="q" type="search" maxlength="60" value="${esc(search)}" placeholder="Plate, chassis number or reference" autocomplete="off" spellcheck="false"></label>
       <button class="secondary" type="submit">Find</button>
       ${search ? `<a href="/o/${org.id}/cases${filter ? `?status=${filter}` : ''}">Clear</a>` : ''}
     </form>`;
@@ -392,11 +469,21 @@ export function caseList(
   return layout(
     'Cases',
     { ...nav, current: 'cases' },
-    `<h1>Cases</h1>
-     <p class="hint">Most recently changed first.</p>
-     ${searchForm}
-     <p class="filters">${filters}</p>${caseTable(org.id, cases, now, empty)}${more}
-     ${cases.length ? `<p><a class="button secondary" href="/o/${org.id}/cases.csv${keep('') ? `?${keep('')}` : ''}">${icon('download')}<span>Download this list (CSV)</span></a></p>` : ''}`,
+    `${pageHead({
+      title: 'Cases',
+      lede: 'Most recently changed first.',
+      ...(cases.length
+        ? {
+            actions: `<a class="button secondary" href="/o/${org.id}/cases.csv${keep('') ? `?${keep('')}` : ''}">${icon('download')}<span>Download this list (CSV)</span></a>`,
+          }
+        : {}),
+    })}
+     <section class="card flush">
+       <div class="card-head"><div class="card-tools">${searchForm}</div></div>
+       ${filters}
+       <div class="card-body"><div class="table-wrap">${caseTable(org.id, cases, now, empty)}</div></div>
+       ${more ? `<div class="card-foot"><span></span>${more}</div>` : ''}
+     </section>`,
   );
 }
 
@@ -406,7 +493,7 @@ export function caseDetail(
   canWrite: boolean,
   notice: string | null,
   labels: Record<string, string>,
-  more = '',
+  more: { main: string; ask: string } = { main: '', ask: '' },
 ): string {
   const org = nav.org;
   if (!org) throw new Error('caseDetail needs an organization');
@@ -420,14 +507,16 @@ export function caseDetail(
         .join('')}</tbody></table>`
     : '<p class="panel">No places. Agents can only look for this vehicle in traffic.</p>';
   const attrs = Object.entries({ ...c.attributes, ...c.vehicle.attributes });
-  const actions =
+  const keep =
     canWrite && open
-      ? `<h2>Keep it running</h2>
-         <p class="hint">Agents look for this vehicle until ${day(c.expires_at)}. Confirm that the seizure order still stands to keep it searchable.</p>
-         <form method="post" action="/o/${org.id}/cases/${c.id}/confirm" class="actions">
+      ? `<p class="hint">Agents look for this vehicle until ${day(c.expires_at)}. Confirm that the seizure order still stands to keep it searchable.</p>
+         <form method="post" action="/o/${org.id}/cases/${c.id}/confirm">
            <button type="submit">Confirm it is still enforceable</button>
-         </form>
-         <details class="withdraw"><summary>Withdraw this case</summary>
+         </form>`
+      : '';
+  const withdraw =
+    canWrite && open
+      ? `<details class="withdraw"><summary>Withdraw this case</summary>
            <p class="hint">When the debt is paid, restructured or the order is lifted, withdraw the case at once: agents stop looking. This can’t be undone; to search again, send the case again.</p>
            <form method="post" action="/o/${org.id}/cases/${c.id}/withdraw" class="stack">
              <label>Reason <input name="reason" required maxlength="200"></label>
@@ -435,16 +524,9 @@ export function caseDetail(
            </form>
          </details>`
       : '';
-  return layout(
-    'Case',
-    { ...nav, current: 'cases' },
-    `${crumbs([`<a href="/o/${org.id}/cases">Cases</a>`, data(c.vehicle.plate)])}
-     ${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
-     <p>${plate(c.vehicle.plate, 'large')}</p>
-     <h1>${data(`${c.vehicle.make} ${c.vehicle.model}`)} ${status(c.status)}</h1>
-     ${caseStages(c.status)}
-     ${c.status === 'pending_identity' ? '<p class="lede">2earl staff are checking this vehicle’s identity (chassis number or plate). Agents don’t see it until then.</p>' : ''}
-     <div class="panel"><dl class="facts">
+  const vehicle = card({
+    title: 'Vehicle and enforcement file',
+    body: `<dl class="facts">
        <dt>Your reference</dt><dd>${data(c.external_ref)}</dd>
        <dt>Chassis number (VIN)</dt><dd>${c.vehicle.vin ? data(c.vehicle.vin) : '—'}</dd>
        <dt>Year and colour</dt><dd>${data([c.vehicle.year ? String(c.vehicle.year) : '', c.vehicle.colour ?? ''].filter(Boolean).join(', ') || '—')}</dd>
@@ -452,15 +534,41 @@ export function caseDetail(
        <dt>File number</dt><dd>${data(c.icra_file_no)}</dd>
        <dt>Seizure order date</dt><dd>${data(c.serh_date)}</dd>
        <dt>Legal basis</dt><dd>${c.legal_basis === 'rehin' ? 'Pledge (rehin)' : 'Attachment (haciz)'}</dd>
-       <dt>Fee</dt><dd>${lira(c.fee_kurus)}</dd>
-       <dt>Last confirmed</dt><dd>${day(c.last_confirmed_at)}</dd>
-       <dt>${open ? 'Expires' : 'Closed'}</dt><dd>${open ? day(c.expires_at) : day(c.delivered_at ?? c.updated_at)}</dd>
        ${attrs.map(([k, v]) => `<dt>${data(labels[k] ?? k)}</dt><dd>${data(typeof v === 'boolean' ? (v ? '✓' : '✗') : String(v))}</dd>`).join('')}
-     </dl></div>
-     ${more}
-     <h2>Where to look</h2>
-     ${places}
-     ${actions}`,
+     </dl>`,
+  });
+  const where = card({
+    title: 'Where to look',
+    flush: true,
+    body: c.places.length ? `<div class="table-wrap">${places}</div>` : places,
+  });
+  const state = card({
+    title: 'Status',
+    body: `<p class="case-plate">${plate(c.vehicle.plate, 'large')}</p>
+       ${caseStages(c.status)}
+       ${c.status === 'pending_identity' ? '<p class="hint">2earl staff are checking this vehicle’s identity (chassis number or plate). Agents don’t see it until then.</p>' : ''}
+       ${facts([
+         ['Fee', lira(c.fee_kurus)],
+         ['Last confirmed', day(c.last_confirmed_at)],
+         [
+           open ? 'Expires' : 'Closed',
+           open ? day(c.expires_at) : day(c.delivered_at ?? c.updated_at),
+         ],
+       ])}
+       ${keep || more.ask ? `<div class="actions-stack">${keep}${more.ask}</div>` : ''}
+       ${withdraw}`,
+  });
+  return layout(
+    'Case',
+    { ...nav, current: 'cases' },
+    `${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
+     ${pageHead({
+       above: crumbs([`<a href="/o/${org.id}/cases">Cases</a>`, data(c.vehicle.plate)]),
+       title: data(`${c.vehicle.make} ${c.vehicle.model}`),
+       badge: status(c.status),
+       meta: `${plate(c.vehicle.plate)} · <span translate="no">${esc(c.external_ref)}</span>`,
+     })}
+     ${split(`${vehicle}${more.main}${where}`, state, true)}`,
   );
 }
 

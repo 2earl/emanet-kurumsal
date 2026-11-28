@@ -9,6 +9,7 @@ import type {
   TimelineEvent,
 } from './core';
 import { fileSize } from './attachments';
+import { card, pageHead, stat, stats } from './dash';
 import { icon } from './icons';
 import { crumbs, data, day, esc, layout, lira, moment, plate, type Nav } from './pages';
 
@@ -44,26 +45,28 @@ export function caseExtras(
   canAsk: boolean,
   /** The company's own reference: what a question about this case is titled with. */
   ref = caseId,
-): string {
+): { main: string; ask: string } {
   const timeline = events.length
-    ? `<h2>What happened</h2><ol class="timeline">${events
-        .map((e) => `<li>${moment(e.at)} <span>${EVENT_LABEL[e.event]}</span></li>`)
-        .join('')}</ol>`
+    ? card({
+        title: 'What happened',
+        body: `<ol class="timeline">${events
+          .map((e) => `<li>${moment(e.at)} <span>${EVENT_LABEL[e.event]}</span></li>`)
+          .join('')}</ol>`,
+      })
     : '';
   const docs = documents.length
-    ? `<h2>Custody documents</h2>
-       <p class="hint">Accepted by 2earl when it confirmed the delivery. Each file’s SHA-256 lets you check that it hasn’t changed since.</p>
-       <table><thead><tr><th>Document</th><th>Taken</th><th>SHA-256</th></tr></thead><tbody>${documents
-         .map(
-           (d) =>
-             `<tr><td><a href="/o/${esc(orgId)}/cases/${esc(caseId)}/documents/${esc(d.id)}">${DOCUMENT_LABEL[d.kind]}</a></td><td>${d.taken_at === null ? '—' : moment(d.taken_at)}</td><td><code translate="no">${esc(d.sha256.slice(0, 16))}…</code></td></tr>`,
-         )
-         .join('')}</tbody></table>`
+    ? `<section class="card flush"><div class="card-head"><h2>Custody documents</h2></div><div class="card-body"><div class="table-wrap"><table><thead><tr><th>Document</th><th>Taken</th><th>SHA-256</th></tr></thead><tbody>${documents
+        .map(
+          (d) =>
+            `<tr><td><a href="/o/${esc(orgId)}/cases/${esc(caseId)}/documents/${esc(d.id)}">${DOCUMENT_LABEL[d.kind]}</a></td><td>${d.taken_at === null ? '—' : moment(d.taken_at)}</td><td><code translate="no">${esc(d.sha256.slice(0, 16))}…</code></td></tr>`,
+        )
+        .join('')}</tbody></table></div></div>
+       <div class="card-foot"><span>Accepted by 2earl when it confirmed the delivery. Each file’s SHA-256 lets you check that it hasn’t changed since.</span></div></section>`
     : '';
   const ask = !canAsk
     ? ''
-    : `<p class="noprint"><a href="/o/${esc(orgId)}/support/new?category=case&amp;about=${encodeURIComponent(ref)}">Ask about this case</a></p>`;
-  return timeline + docs + ask;
+    : `<a class="button secondary noprint" href="/o/${esc(orgId)}/support/new?category=case&amp;about=${encodeURIComponent(ref)}">${icon('mail')}<span>Ask 2earl about this case</span></a>`;
+  return { main: timeline + docs, ask };
 }
 
 const INVOICE_STATUS: Record<PartnerInvoice['status'], string> = {
@@ -80,18 +83,49 @@ export function invoiceList(nav: Nav, invoices: PartnerInvoice[]): string {
   return layout(
     'Invoices',
     { ...nav, current: 'invoices' },
-    `<h1>Invoices</h1>
-     <p class="lede">One invoice per period for the vehicles that reached custody, due within 15 days. The e-invoice itself comes through the e-Fatura system.</p>
-     ${open.length ? `<p class="panel">Open: ${lira(due)}</p>` : ''}
-     ${invoices.length ? `<p><a class="button secondary" href="/o/${esc(org.id)}/invoices.csv">${icon('download')} Download all invoices (CSV)</a></p>` : ''}
+    `${pageHead({
+      title: 'Invoices',
+      lede: 'One invoice per period for the vehicles that reached custody, due within 15 days. The e-invoice itself comes through the e-Fatura system.',
+      ...(invoices.length
+        ? {
+            actions: `<a class="button secondary" href="/o/${esc(org.id)}/invoices.csv">${icon('download')}<span>Download all invoices (CSV)</span></a>`,
+          }
+        : {}),
+    })}
      ${
        invoices.length
-         ? `<table><thead><tr><th>Issued</th><th>Number</th><th class="num">Vehicles</th><th class="num">Net</th><th class="num">VAT</th><th class="num">Total</th><th>Status</th></tr></thead><tbody>${invoices
-             .map(
-               (i) =>
-                 `<tr><td><a href="/o/${esc(org.id)}/invoices/${esc(i.id)}">${day(i.issued_at)}</a></td><td>${i.number ? data(i.number) : '—'}</td><td class="num" translate="no">${String(i.cases)}</td><td class="num">${lira(i.net_kurus)}</td><td class="num">${lira(i.kdv_kurus)}</td><td class="num">${lira(i.total_kurus)}</td><td>${INVOICE_STATUS[i.status]}</td></tr>`,
-             )
-             .join('')}</tbody></table>`
+         ? `${stats([
+             stat({
+               label: 'To pay',
+               value: lira(due),
+               tone: open.length ? 'wait' : 'quiet',
+               note: `${String(open.length)} open`,
+             }),
+             stat({
+               label: 'Paid',
+               value: lira(
+                 invoices
+                   .filter((i) => i.status === 'paid')
+                   .reduce((sum, i) => sum + i.total_kurus, 0),
+               ),
+               tone: 'quiet',
+             }),
+             stat({
+               label: 'Vehicles invoiced',
+               value: String(invoices.reduce((sum, i) => sum + i.cases, 0)),
+               tone: 'quiet',
+             }),
+           ])}
+           ${card({
+             title: 'All invoices',
+             flush: true,
+             body: `<div class="table-wrap"><table><thead><tr><th>Issued</th><th>Number</th><th class="num">Vehicles</th><th class="num">Net</th><th class="num">VAT</th><th class="num">Total</th><th>Status</th></tr></thead><tbody>${invoices
+               .map(
+                 (i) =>
+                   `<tr><td><a href="/o/${esc(org.id)}/invoices/${esc(i.id)}">${day(i.issued_at)}</a></td><td>${i.number ? data(i.number) : '—'}</td><td class="num" translate="no">${String(i.cases)}</td><td class="num">${lira(i.net_kurus)}</td><td class="num">${lira(i.kdv_kurus)}</td><td class="num">${lira(i.total_kurus)}</td><td>${INVOICE_STATUS[i.status]}</td></tr>`,
+               )
+               .join('')}</tbody></table></div>`,
+           })}`
          : '<p class="panel">No invoices yet. You pay only for vehicles that reach custody.</p>'
      }`,
   );
@@ -285,9 +319,15 @@ export function supportList(
   return layout(
     'Support',
     { ...nav, current: 'support' },
-    `${saved ? `<p class="notice">${esc(saved)}</p>` : ''}<h1>Support</h1>
-     <p class="lede">Ask 2earl about a case, an invoice or the integration. We answer here and email whoever asked.</p>
-     ${canWrite ? `<p><a class="button" href="/o/${esc(org.id)}/support/new">${icon('plus')} New message</a></p>` : ''}
+    `${saved ? `<p class="notice">${esc(saved)}</p>` : ''}${pageHead({
+      title: 'Support',
+      lede: 'Ask 2earl about a case, an invoice or the integration. We answer here and email whoever asked.',
+      ...(canWrite
+        ? {
+            actions: `<a class="button" href="/o/${esc(org.id)}/support/new">${icon('plus')}<span>New message</span></a>`,
+          }
+        : {}),
+    })}
      ${
        list.length
          ? `<table><thead><tr><th>Subject</th><th>About</th><th>Status</th><th>Updated</th></tr></thead><tbody>${list
