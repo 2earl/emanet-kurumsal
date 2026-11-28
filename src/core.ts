@@ -261,6 +261,8 @@ export interface Ticket {
   created_at: number;
   updated_at: number;
   closed_at: number | null;
+  /** Whether the company said 2earl's answer helped; absent before core has it. */
+  rating?: 'helped' | 'not_helped' | null;
 }
 
 export interface TicketMessage {
@@ -339,6 +341,12 @@ export interface PartnerApi {
     attachments?: AttachmentInput[],
   ): Promise<Result<null>>;
   closeTicket(orgId: string, userId: string, ticketId: string): Promise<Result<null>>;
+  rateTicket(
+    orgId: string,
+    userId: string,
+    ticketId: string,
+    helped: boolean,
+  ): Promise<Result<null>>;
   report(orgId: string): Promise<Result<Report>>;
   onboardingInvitation(token: string): Promise<Result<InvitationView>>;
   claimOnboarding(token: string, userId: string): Promise<Result<{ id: string }>>;
