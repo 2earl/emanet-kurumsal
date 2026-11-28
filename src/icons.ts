@@ -52,6 +52,7 @@ const PATHS = {
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
   undo: '<path d="M9 6L4 11l5 5M4 11h10a5 5 0 0 1 0 10h-2"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/>',
 } as const;
 

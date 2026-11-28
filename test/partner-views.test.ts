@@ -57,7 +57,7 @@ describe('what a partner sees', () => {
       await request('/o/org-1/invoices', { headers: { Cookie: auditor } })
     ).text();
     expect(list).toContain('EMN2026000000001');
-    expect(list).toContain('Open:');
+    expect(list).toContain('To pay');
     const one = await (
       await request('/o/org-1/invoices/inv-1', { headers: { Cookie: auditor } })
     ).text();
