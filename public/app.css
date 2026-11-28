@@ -4243,6 +4243,71 @@ input[type='file']::file-selector-button {
   font: inherit;
   cursor: pointer;
 }
+
+/* Cases chosen to confirm: a box first, on a phone at the row's start. */
+table.cases th.pick,
+table.cases td.pick {
+  width: var(--target);
+  padding-right: 0;
+}
+
+table.cases td.pick input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--action);
+}
+
+section.card .card-foot .foot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 40rem) {
+  table.cases.selectable tr {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 'pick plate status' 'pick vehicle fee' 'pick ref expires';
+  }
+
+  table.cases.selectable td.pick {
+    grid-area: pick;
+    align-self: center;
+  }
+
+  table.cases.selectable td.c-plate {
+    grid-area: plate;
+    justify-self: start;
+  }
+
+  table.cases.selectable td.c-vehicle {
+    grid-area: vehicle;
+    justify-self: start;
+    color: inherit;
+  }
+
+  table.cases.selectable td.c-ref {
+    grid-area: ref;
+    justify-self: start;
+    color: var(--muted);
+  }
+
+  table.cases.selectable td.c-status {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  table.cases.selectable td.c-fee {
+    grid-area: fee;
+    justify-self: end;
+  }
+
+  table.cases.selectable td.c-expires {
+    grid-area: expires;
+    justify-self: end;
+    color: var(--muted);
+  }
+}
+
 /* Did our answer help: a question and two answers, the one given marked. */
 form.rate {
   display: flex;
