@@ -143,6 +143,34 @@ function integrationTabs(orgId: string, current: 'keys' | 'webhooks'): string {
   return `<nav class="tabs" aria-label="Integrations">${tab('keys', 'API keys')}${tab('webhooks', 'Webhooks')}</nav>`;
 }
 
+/**
+ * The breadcrumb (2earl design system): parents as links, then this page. Each item is HTML
+ * already made safe by the caller. On a phone only the direct parent shows, as one step back.
+ */
+export function crumbs(items: string[]): string {
+  const last = items.length - 1;
+  return `<nav class="crumbs" aria-label="Breadcrumb"><ol>${items
+    .map((item, i) =>
+      i === last
+        ? `<li><span aria-current="page">${item}</span></li>`
+        : `<li${i === last - 1 ? ' class="back-to"' : ''}>${item}</li>`,
+    )
+    .join('')}</ol></nav>`;
+}
+
+/** Where a case is on its way to custody: done, now, still to come. Closed cases show none. */
+function caseStages(statusNow: CaseStatus): string {
+  if (statusNow === 'withdrawn' || statusNow === 'expired') return '';
+  const now = statusNow === 'pending_identity' ? 1 : statusNow === 'active' ? 2 : 4;
+  const names = ['Added', '2earl checks the vehicle', 'Agents are looking', 'In custody'];
+  return `<ol class="progress stages" aria-label="Where this case is">${names
+    .map(
+      (name, i) =>
+        `<li class="${i < now ? 'done' : i === now ? 'now' : ''}"><span${i === now ? ' aria-current="step"' : ''}>${name}</span></li>`,
+    )
+    .join('')}</ol>`;
+}
+
 export function problem(nav: Nav, title: string, text: string): string {
   return layout(
     title,
@@ -365,9 +393,11 @@ export function caseDetail(
   return layout(
     'Case',
     { ...nav, current: 'cases' },
-    `${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
+    `${crumbs([`<a href="/o/${org.id}/cases">Cases</a>`, data(c.vehicle.plate)])}
+     ${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
      <p>${plate(c.vehicle.plate, 'large')}</p>
      <h1>${data(`${c.vehicle.make} ${c.vehicle.model}`)} ${status(c.status)}</h1>
+     ${caseStages(c.status)}
      ${c.status === 'pending_identity' ? '<p class="lede">2earl staff are checking this vehicle’s identity (chassis number or plate). Agents don’t see it until then.</p>' : ''}
      <div class="panel"><dl class="facts">
        <dt>Your reference</dt><dd>${data(c.external_ref)}</dd>

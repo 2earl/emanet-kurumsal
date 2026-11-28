@@ -589,6 +589,7 @@ export function createApp(now: () => number) {
           events.ok ? events.value : [],
           documents.ok ? documents.value : [],
           may(c, 'emanet:cases.write'),
+          result.value.external_ref,
         ),
       ),
     );

@@ -9,7 +9,7 @@ import type {
   TimelineEvent,
 } from './core';
 import { icon } from './icons';
-import { data, day, esc, layout, lira, moment, plate, type Nav } from './pages';
+import { crumbs, data, day, esc, layout, lira, moment, plate, type Nav } from './pages';
 
 /**
  * A partner's view of what happened (docs/DESIGN.md §5): a case's timeline and custody
@@ -41,6 +41,8 @@ export function caseExtras(
   events: { event: TimelineEvent; at: number }[],
   documents: CaseDocument[],
   canAsk: boolean,
+  /** The company's own reference: what a question about this case is titled with. */
+  ref = caseId,
 ): string {
   const timeline = events.length
     ? `<h2>What happened</h2><ol class="timeline">${events
@@ -59,7 +61,7 @@ export function caseExtras(
     : '';
   const ask = !canAsk
     ? ''
-    : `<p class="noprint"><a href="/o/${esc(orgId)}/support/new?category=case&amp;about=${encodeURIComponent(caseId)}">Ask about this case</a></p>`;
+    : `<p class="noprint"><a href="/o/${esc(orgId)}/support/new?category=case&amp;about=${encodeURIComponent(ref)}">Ask about this case</a></p>`;
   return timeline + docs + ask;
 }
 
@@ -103,7 +105,7 @@ export function invoiceDetail(
   return layout(
     'Invoice',
     { ...nav, current: 'invoices' },
-    `<p><a href="/o/${esc(org.id)}/invoices">All invoices</a></p>
+    `${crumbs([`<a href="/o/${esc(org.id)}/invoices">Invoices</a>`, invoice.number ? data(invoice.number) : day(invoice.issued_at)])}
      <h1>Invoice of ${day(invoice.issued_at)}</h1>
      <div class="panel"><dl class="facts">
        <dt>Number</dt><dd>${invoice.number ? data(invoice.number) : 'Not issued by e-Fatura yet'}</dd>
@@ -293,7 +295,7 @@ export function supportNew(
   return layout(
     'New message',
     { ...nav, current: 'support' },
-    `<p><a href="/o/${esc(org.id)}/support">Support</a></p>
+    `${crumbs([`<a href="/o/${esc(org.id)}/support">Support</a>`, 'New message'])}
      <h1>New message</h1>
      ${errorText ? `<p class="error">${esc(errorText)}</p>` : ''}
      <form method="post" action="/o/${esc(org.id)}/support/new" class="stack">
@@ -318,7 +320,7 @@ export function supportThread(
   return layout(
     t.ticket.subject,
     { ...nav, current: 'support' },
-    `${saved ? `<p class="notice">${esc(saved)}</p>` : ''}<p><a href="/o/${esc(org.id)}/support">Support</a></p>
+    `${crumbs([`<a href="/o/${esc(org.id)}/support">Support</a>`, data(t.ticket.subject)])}${saved ? `<p class="notice">${esc(saved)}</p>` : ''}
      <h1>${data(t.ticket.subject)}</h1>
      <p class="hint">${CATEGORY_LABEL[t.ticket.category] ?? data(t.ticket.category)} · ${TICKET_LABEL[t.ticket.status]}</p>
      <ul class="cards">${t.messages
