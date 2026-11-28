@@ -24,10 +24,11 @@ const MEMBERS = {
   'asker-2': [],
   'asker-3': [],
   'asker-4': [],
+  'asker-5': [],
 };
 const base = (uid) => uid.split('!')[0];
 // Accounts joining Emanet, by the address they sign in with; organizations created for them.
-const ADDRESSES = { 'joiner-1': 'ops@bank.example', 'joiner-2': 'ops2@bank.example', 'owner-1': 'owner@bank.example', 'asker-1': 'zeynep@firma.example', 'asker-2': 'ali@firma.example', 'asker-3': 'a3@firma.example', 'asker-4': 'a4@firma.example' };
+const ADDRESSES = { 'joiner-1': 'ops@bank.example', 'joiner-2': 'ops2@bank.example', 'owner-1': 'owner@bank.example', 'asker-1': 'zeynep@firma.example', 'asker-2': 'ali@firma.example', 'asker-3': 'a3@firma.example', 'asker-4': 'a4@firma.example', 'asker-5': 'a5@firma.example' };
 const created = [];
 const members = (uid) => [...(MEMBERS[base(uid)] ?? []), ...created.filter(([u]) => u === base(uid)).map(([, o, n]) => [o, n, 'owner'])];
 export class OrganizationDirectory extends WorkerEntrypoint {
@@ -346,6 +347,7 @@ export class PartnerApi extends WorkerEntrypoint {
     if (!o || o.claimed_by !== uid) return fail('not_found');
     if (o.status !== 'in_progress') return fail('not_editable');
     if (PARTNERS[orgId]) return fail('partner_exists');
+    if (o.org_id !== null) return fail('org_locked');
     o.org_id = orgId; return ok(null);
   }
   async saveOnboardingDetails(id, uid, d) {
@@ -393,6 +395,31 @@ let draftOnly = false;
 export default { fetch() { return new Response(null, { status: 404 }); } };
 `;
 
+/**
+ * Turnstile's siteverify: token "pass" passes for this site and form; "other-site" was solved on
+ * another host, "other-form" for another action; anything else fails. A wrong secret fails.
+ */
+const INTERNET = `
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (url.href !== 'https://challenges.cloudflare.com/turnstile/v0/siteverify' || request.method !== 'POST') {
+      return new Response('not here', { status: 404 });
+    }
+    const form = new URLSearchParams(await request.text());
+    const token = form.get('response');
+    const right = form.get('secret') === 'test-turnstile-secret';
+    const pass = right && ['pass', 'other-site', 'other-form'].includes(token);
+    return Response.json({
+      success: pass,
+      hostname: token === 'other-site' ? 'evil.example' : 'kurumsal.emanet.dev',
+      action: token === 'other-form' ? 'login' : 'invitation_request',
+      'error-codes': pass ? [] : ['invalid-input-response'],
+    });
+  },
+};
+`;
+
 export default defineConfig(async () => {
   const migrations = await readD1Migrations('./migrations');
   return {
@@ -405,10 +432,16 @@ export default defineConfig(async () => {
             SESSION_PEPPER: 'test-session-pepper',
             // 32 zero bytes, base64: test only.
             WEBHOOK_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+            // Turnstile's published test site key; the secret only the stand-in below knows.
+            TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
+            TURNSTILE_SECRET: 'test-turnstile-secret',
           },
+          // The Worker's own fetch() calls (only Turnstile's siteverify) go to a stand-in.
+          outboundService: 'internet',
           workers: [
             { name: 'login', modules: true, compatibilityDate: '2026-11-01', script: LOGIN },
             { name: 'emanet-core', modules: true, compatibilityDate: '2026-11-01', script: CORE },
+            { name: 'internet', modules: true, compatibilityDate: '2026-11-01', script: INTERNET },
           ],
         },
       }),

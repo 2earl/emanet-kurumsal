@@ -18,6 +18,32 @@ export const tr: Catalog = {
   ],
   monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
   messages: {
+    'Switched off: the person who added it no longer manages integrations here':
+      'Kapatıldı: ekleyen kişi artık burada entegrasyonları yönetmiyor',
+    'Switched off while the organization wasn’t active': 'Kuruluş etkin değilken kapatıldı',
+    '2earl uses what you write here only to answer your request. It is deleted a year after the team answers, or when you delete your 2earl account. The check against automated requests is Cloudflare Turnstile.':
+      '2earl buraya yazdıklarınızı yalnızca isteğinizi yanıtlamak için kullanır. Ekip yanıtladıktan bir yıl sonra ya da 2earl hesabınızı sildiğinizde silinir. Otomatik isteklere karşı denetim Cloudflare Turnstile ile yapılır.',
+    'Complete the check above the button, then send again.':
+      'Düğmenin üstündeki denetimi tamamlayın, sonra yeniden gönderin.',
+    'The check didn’t pass. Do it again, then send.':
+      'Denetim geçilemedi. Yeniden yapın, sonra gönderin.',
+    'This form needs JavaScript for a short check against automated requests. Turn it on, or write to <0>iletisim@emanet.dev</0>.':
+      'Bu form, otomatik isteklere karşı kısa bir denetim için JavaScript gerektirir. JavaScript’i açın ya da <0>iletisim@emanet.dev</0> adresine yazın.',
+    'This form needs JavaScript for a short check against automated requests. Turn it on, or write to iletisim@emanet.dev.':
+      'Bu form, otomatik isteklere karşı kısa bir denetim için JavaScript gerektirir. JavaScript’i açın ya da iletisim@emanet.dev adresine yazın.',
+    'Requests can’t be checked right now, so they can’t be sent. Try again later, or write to iletisim@emanet.dev.':
+      'İstekler şu anda denetlenemiyor, bu yüzden gönderilemiyor. Daha sonra yeniden deneyin ya da iletisim@emanet.dev adresine yazın.',
+    'Requests are closed for a moment': 'İstekler kısa süreliğine kapalı',
+    'The form can’t check requests right now, so it is closed. Try again later, or write to <0>iletisim@emanet.dev</0>.':
+      'Form şu anda istekleri denetleyemiyor, bu yüzden kapalı. Daha sonra yeniden deneyin ya da <0>iletisim@emanet.dev</0> adresine yazın.',
+    'Created: <0/>. It belongs to this application and can’t be changed.':
+      'Oluşturuldu: <0/>. Bu başvuruya aittir ve değiştirilemez.',
+    'Created: the company’s organization. It belongs to this application and can’t be changed.':
+      'Oluşturuldu: şirketin kuruluşu. Bu başvuruya aittir ve değiştirilemez.',
+    'Emanet always uses a new organization, made for the company now, with you as its only member. An organization you already have can’t be used: its members and settings weren’t part of this application.':
+      'Emanet her zaman şirket için şimdi oluşturulan, tek üyesi sizin olduğunuz yeni bir kuruluş kullanır. Mevcut bir kuruluşunuz kullanılamaz: üyeleri ve ayarları bu başvurunun parçası değildi.',
+    'This application already has its organization. It can’t be changed.':
+      'Bu başvurunun kuruluşu zaten var. Değiştirilemez.',
     '100 to 1,000 vehicles a year': 'Yılda 100 ile 1.000 araç',
     '2earl couldn’t go ahead with your request for <0/> for now. If something has changed, you can ask again.':
       '2earl, <0/> için isteğinizle şimdilik ilerleyemedi. Durum değiştiyse yeniden isteyebilirsiniz.',

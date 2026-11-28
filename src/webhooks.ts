@@ -1,4 +1,4 @@
-import { core } from './core';
+import { authz, core } from './core';
 import { base64url, randomToken } from './http';
 
 /**
@@ -37,6 +37,8 @@ export interface Webhook {
   created_by: string;
   created_at: number;
   disabled_at: number | null;
+  /** Why it is off: the receiver kept failing, its creator left, or the organization isn't active. */
+  disabled_reason: 'failures' | 'owner_left' | 'partner_inactive' | null;
   consecutive_failures: number;
 }
 
@@ -177,7 +179,7 @@ async function catchUpCursor(env: Env, orgId: string, now: number): Promise<void
 
 export async function listWebhooks(env: Env, orgId: string): Promise<Webhook[]> {
   const { results } = await env.DB.prepare(
-    `SELECT id, url, events, created_by, created_at, disabled_at, consecutive_failures
+    `SELECT id, url, events, created_by, created_at, disabled_at, disabled_reason, consecutive_failures
      FROM webhooks WHERE org_id = ? ORDER BY created_at`,
   )
     .bind(orgId)
@@ -210,14 +212,72 @@ export async function deleteWebhook(env: Env, orgId: string, id: string): Promis
   return result[1]?.meta.changes === 1;
 }
 
-/** Switches a webhook that was turned off for failing back on. */
-export async function enableWebhook(env: Env, orgId: string, id: string): Promise<boolean> {
+/**
+ * Switches a webhook that was turned off back on. Whoever does it answers for it from now on:
+ * it keeps running only while they manage the organization's integrations.
+ */
+export async function enableWebhook(
+  env: Env,
+  orgId: string,
+  id: string,
+  uid: string,
+): Promise<boolean> {
   const result = await env.DB.prepare(
-    'UPDATE webhooks SET disabled_at = NULL, consecutive_failures = 0 WHERE id = ? AND org_id = ?',
+    `UPDATE webhooks SET disabled_at = NULL, disabled_reason = NULL, consecutive_failures = 0,
+       created_by = ? WHERE id = ? AND org_id = ?`,
   )
-    .bind(id, orgId)
+    .bind(uid, id, orgId)
     .run();
   return result.meta.changes === 1;
+}
+
+/**
+ * Before anything is queued or sent: a webhook sends the organization's case events to an
+ * address someone chose, so it runs only while that person still manages the organization's
+ * integrations (login's authorization API, read live) and the organization is an active partner.
+ * Otherwise it is switched off, with the reason shown on the Webhooks page. Returns how many.
+ */
+export async function guardWebhooks(env: Env, now: number): Promise<number> {
+  const { results } = await env.DB.prepare(
+    'SELECT id, org_id, created_by FROM webhooks WHERE disabled_at IS NULL',
+  ).all<{ id: string; org_id: string; created_by: string }>();
+  const active = new Map<string, boolean>();
+  const manages = new Map<string, boolean>();
+  let off = 0;
+  for (const hook of results) {
+    let partnerActive = active.get(hook.org_id);
+    if (partnerActive === undefined) {
+      const partner = await core(env).partner(hook.org_id);
+      partnerActive = partner.ok && partner.value.status === 'active';
+      active.set(hook.org_id, partnerActive);
+    }
+    let reason: 'owner_left' | 'partner_inactive' | null = partnerActive
+      ? null
+      : 'partner_inactive';
+    if (!reason) {
+      const key = `${hook.org_id}|${hook.created_by}`;
+      let may = manages.get(key);
+      if (may === undefined) {
+        may = await managesIntegrations(env, hook.org_id, hook.created_by);
+        manages.set(key, may);
+      }
+      if (!may) reason = 'owner_left';
+    }
+    if (!reason) continue;
+    await env.DB.prepare(
+      'UPDATE webhooks SET disabled_at = ?, disabled_reason = ? WHERE id = ? AND disabled_at IS NULL',
+    )
+      .bind(now, reason, hook.id)
+      .run();
+    off++;
+  }
+  return off;
+}
+
+/** Whether this person may manage the organization's API keys and webhooks right now. */
+export async function managesIntegrations(env: Env, orgId: string, uid: string): Promise<boolean> {
+  const granted = await authz(env).permissionsOf({ subject: { type: 'user', id: uid }, orgId });
+  return granted.permissions.includes('emanet:integrations.manage');
 }
 
 // ---- Delivery ---------------------------------------------------------------------------------
@@ -362,9 +422,10 @@ export async function sendDue(
           ).bind(attempts, status, now + wait, delivery.id),
       env.DB.prepare(
         `UPDATE webhooks SET consecutive_failures = consecutive_failures + 1,
-           disabled_at = CASE WHEN consecutive_failures + 1 >= ? THEN ? ELSE disabled_at END
+           disabled_at = CASE WHEN consecutive_failures + 1 >= ? THEN ? ELSE disabled_at END,
+           disabled_reason = CASE WHEN consecutive_failures + 1 >= ? THEN 'failures' ELSE disabled_reason END
          WHERE id = ? AND disabled_at IS NULL RETURNING org_id, url, disabled_at`,
-      ).bind(disableAfter, now, delivery.webhook_id),
+      ).bind(disableAfter, now, disableAfter, delivery.webhook_id),
     ]);
     // Switched off just now: the company's operations contact is told (the core mails them) and
     // staff see it. Told once: a webhook already off isn't counted again.

@@ -7,7 +7,12 @@ and are told when a vehicle reaches a custodian car park.
 - **Web app**: sign in with login.2earl.com. Pages per login organization, by role:
   - members add vehicles (form or CSV upload) and withdraw or confirm cases;
   - auditors read;
-  - owners and admins also manage API keys and webhooks, after a fresh second factor.
+  - owners and admins also manage API keys and webhooks, after a fresh second factor. A key or
+    webhook works only while the person who made it (or switched it back on) still manages the
+    organization's integrations;
+  - someone with no organization can ask 2earl for an invitation, behind Cloudflare Turnstile
+    (keys made by `deploy.yml`; without them the form is closed). An organization joining Emanet
+    is always a new one, made in login for its application.
 - **API** at `/api/v1`, with scoped API keys: cases, schema, events. Reference at `/docs/api`.
 - **Webhooks**: `case.delivered`, `case.expired`, `invoice.issued`. Signed with HMAC-SHA256,
   retried with backoff for a day, switched off after 20 failures in a row.

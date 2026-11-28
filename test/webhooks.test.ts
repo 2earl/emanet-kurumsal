@@ -1,6 +1,14 @@
 import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { WebhookError, checkUrl, createWebhook, enqueueEvents, sendDue } from '../src/webhooks';
+import {
+  WebhookError,
+  checkUrl,
+  createWebhook,
+  enqueueEvents,
+  guardWebhooks,
+  listWebhooks,
+  sendDue,
+} from '../src/webhooks';
 import { coreHooks } from './helpers';
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -231,5 +239,53 @@ describe('a webhook that keeps failing', () => {
     expect(hook?.consecutive_failures).toBe(20);
     const told = (await coreHooks().testIntegrations()).filter((i) => i[2] === 'webhook_disabled');
     expect(told).toEqual([['org-1', 'system', 'webhook_disabled', 'down.bank.example']]);
+  });
+});
+
+describe('guard', () => {
+  it('switches off a webhook whose creator left, or whose organization isn’t active', async () => {
+    const authz = env.AUTHZ as unknown as {
+      testGive(uid: string, orgId: string, permissions: string[]): Promise<void>;
+    };
+    await authz.testGive('auditor-1', 'org-1', ['emanet:integrations.manage']);
+    const mine = await createWebhook(
+      env,
+      {
+        orgId: 'org-1',
+        url: 'https://hooks.example.com/a',
+        events: ['case.delivered'],
+        uid: 'auditor-1',
+      },
+      now(),
+    );
+    const owners = await createWebhook(
+      env,
+      {
+        orgId: 'org-1',
+        url: 'https://hooks.example.com/b',
+        events: ['case.delivered'],
+        uid: 'owner-1',
+      },
+      now(),
+    );
+    const inactive = await createWebhook(
+      env,
+      {
+        orgId: 'org-3',
+        url: 'https://hooks.example.com/c',
+        events: ['case.delivered'],
+        uid: 'invited-1',
+      },
+      now(),
+    );
+    expect(await guardWebhooks(env, now())).toBe(1);
+    await authz.testGive('auditor-1', 'org-1', []);
+    expect(await guardWebhooks(env, now())).toBe(1);
+    const hooks = await listWebhooks(env, 'org-1');
+    expect(hooks.find((h) => h.id === mine.id)).toMatchObject({ disabled_reason: 'owner_left' });
+    expect(hooks.find((h) => h.id === owners.id)).toMatchObject({ disabled_at: null });
+    expect((await listWebhooks(env, 'org-3')).find((h) => h.id === inactive.id)).toMatchObject({
+      disabled_reason: 'partner_inactive',
+    });
   });
 });

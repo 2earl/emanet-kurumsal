@@ -1,6 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { CASE_STATUSES, core, type CaseStatus, type Result } from './core';
 import { authenticate, type KeyScope } from './keys';
+import { managesIntegrations } from './webhooks';
 
 /**
  * The creditors' API at /api/v1 (docs/API.md). Authenticated by an API key; every call acts for
@@ -95,6 +96,18 @@ export function createApi(now: () => number) {
     if (!partner.ok || partner.value.status !== 'active') {
       return c.json(
         { error: 'partner_not_active', detail: 'This organization isn’t active in Emanet.' },
+        403,
+      );
+    }
+    // A key acts for the person who made it: it stops working the moment they leave the
+    // organization or stop managing its integrations (read live from login, like a page).
+    if (!(await managesIntegrations(c.env, key.orgId, key.createdBy))) {
+      return c.json(
+        {
+          error: 'key_owner_left',
+          detail:
+            'The person who made this key no longer manages integrations in this organization. Make a new key.',
+        },
         403,
       );
     }

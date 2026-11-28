@@ -31,6 +31,7 @@ import {
 } from './core';
 import { MAX_BYTES, parseCases, parseDate, templateCsv, typedValue } from './csv';
 import {
+  CAPTCHA_CSP,
   SECURITY_HEADERS,
   SESSION_COOKIE,
   SIGNIN_COOKIE,
@@ -71,6 +72,7 @@ import { apiDocs } from './api-docs';
 import { openapi, toYaml } from './openapi';
 import * as pages from './pages';
 import * as requestPages from './request-pages';
+import { TOKEN_FIELD, captchaSiteKey, verifyCaptcha } from './captcha';
 import {
   WebhookError,
   createWebhook,
@@ -236,6 +238,8 @@ export function createApp(now: () => number) {
         'Content-Security-Policy',
         `${SECURITY_HEADERS['Content-Security-Policy'] ?? ''}; sandbox`,
       );
+    } else if (c.req.path === '/request') {
+      c.res.headers.set('Content-Security-Policy', CAPTCHA_CSP);
     }
     if (!c.res.headers.has('Cache-Control')) c.res.headers.set('Cache-Control', 'no-store');
   });
@@ -288,6 +292,11 @@ export function createApp(now: () => number) {
 
   // ---- Asking for an invitation (no organization yet) -----------------------------------------
 
+  const captcha = (c: AppContext) => {
+    const siteKey = captchaSiteKey(c.env);
+    return siteKey ? { siteKey, locale: currentLocale() } : null;
+  };
+
   /** Where someone who shouldn't see the form goes instead, or null to show it. */
   const requestElsewhere = async (c: AppContext, uid: string): Promise<string | null> => {
     if ((await partnersOf(c, uid)).length > 0) return '/';
@@ -302,7 +311,7 @@ export function createApp(now: () => number) {
     if (!session) return c.redirect('/signin?return=%2Frequest', 302);
     const elsewhere = await requestElsewhere(c, session.uid);
     if (elsewhere) return c.redirect(elsewhere, 302);
-    return c.html(requestPages.requestForm({}, null));
+    return c.html(requestPages.requestForm({}, null, captcha(c)));
   });
 
   app.post('/request', async (c) => {
@@ -331,14 +340,23 @@ export function createApp(now: () => number) {
       const value = form[key];
       values[key] = typeof value === 'string' ? value : '';
     }
-    const again = (error: string) =>
+    const again = (error: string, status: 400 | 503 = 400) =>
       c.html(
         requestPages.requestForm(
           values,
           requestPages.REQUEST_ERROR[error] ?? 'The request couldn’t be sent. Try again.',
+          captcha(c),
         ),
-        400,
+        status,
       );
+    // The challenge first: nothing else is looked at, or sent anywhere, without it.
+    const check = await verifyCaptcha(
+      c.env,
+      form[TOKEN_FIELD],
+      c.req.header('CF-Connecting-IP') ?? null,
+    );
+    if (check === 'unavailable') return again('captcha_unavailable', 503);
+    if (check !== 'ok') return again(check === 'missing' ? 'captcha_missing' : 'captcha_failed');
     const email = values.contactEmail?.trim() ?? '';
     // The invitation goes to this address and only an account holding it can take it.
     if (email && !(await provisioning(c.env).hasAddress(session.uid, email))) {
@@ -1191,7 +1209,10 @@ export function createApp(now: () => number) {
 
   app.post('/o/:org/webhooks/:id/enable', async (c) => {
     if (!integrations(c)) return forbidden(c);
-    if (await enableWebhook(c.env, org(c).orgId, c.req.param('id'))) {
+    // Switching on makes this person answer for where the data goes: a recent second factor,
+    // as when adding a webhook.
+    if (!fresh(c)) return c.redirect(`/o/${org(c).orgId}/webhooks`, 303);
+    if (await enableWebhook(c.env, org(c).orgId, c.req.param('id'), uid(c))) {
       await recordIntegration(c, 'webhook_enabled', c.req.param('id'));
     }
     return c.redirect(`/o/${org(c).orgId}/webhooks`, 303);

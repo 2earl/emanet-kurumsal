@@ -187,6 +187,7 @@ describe('Turkish', () => {
       kind: 'bank',
       contactName: 'Zeynep Kaya',
       contactEmail: email,
+      'cf-turnstile-response': 'pass',
     });
     for (const [uid, email, end] of [
       ['asker-3', 'a3@firma.example', 'invited'],
@@ -197,6 +198,8 @@ describe('Turkish', () => {
       await get('/request', cookie);
       await send(cookie, form('x@else.example'));
       await send(cookie, { ...form(email), kind: '' });
+      await send(cookie, { ...form(email), 'cf-turnstile-response': '' });
+      await send(cookie, { ...form(email), 'cf-turnstile-response': 'nope' });
       await send(cookie, form(email));
       await get('/?requested=1', cookie);
       await coreHooks().testHandleRequest(uid, end);

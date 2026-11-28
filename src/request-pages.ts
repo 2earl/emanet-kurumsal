@@ -1,4 +1,5 @@
 import { REQUEST_KINDS, REQUEST_VOLUMES, type OwnInvitationRequest } from './core';
+import { REQUEST_ACTION, TURNSTILE_ORIGIN } from './captcha';
 import { card, facts, pageHead, split } from './dash';
 import { icon } from './icons';
 import { data, day, esc, layout } from './pages';
@@ -33,6 +34,10 @@ export const REQUEST_ERROR: Record<string, string> = {
   invalid_volume: 'Choose how many vehicles, or leave it empty.',
   already_requested: 'You have already sent a request. 2earl’s team will answer it by email.',
   too_many_requests: 'You have sent three requests in the last 30 days. Try again later.',
+  captcha_missing: 'Complete the check above the button, then send again.',
+  captcha_failed: 'The check didn’t pass. Do it again, then send.',
+  captcha_unavailable:
+    'Requests can’t be checked right now, so they can’t be sent. Try again later, or write to iletisim@emanet.dev.',
 };
 
 const NEXT = `<ol>
@@ -42,7 +47,7 @@ const NEXT = `<ol>
 </ol>`;
 
 const PRIVACY =
-  '<p class="hint">2earl uses what you write here only to answer your request. It is deleted a year after the team answers, or when you delete your 2earl account.</p>';
+  '<p class="hint">2earl uses what you write here only to answer your request. It is deleted a year after the team answers, or when you delete your 2earl account. The check against automated requests is Cloudflare Turnstile.</p>';
 
 function status(r: OwnInvitationRequest): string {
   if (r.status === 'new') {
@@ -100,7 +105,11 @@ export function noOrganization(
 }
 
 /** The request form. `values` are what was sent, kept when the core said no. */
-export function requestForm(values: Record<string, string>, errorText: string | null): string {
+export function requestForm(
+  values: Record<string, string>,
+  errorText: string | null,
+  captcha: { siteKey: string; locale: string } | null,
+): string {
   const option = (name: string, key: string, label: string) =>
     `<option value="${esc(key)}"${values[name] === key ? ' selected' : ''}>${label}</option>`;
   const kinds = (Object.keys(KIND_LABEL) as (keyof typeof KIND_LABEL)[])
@@ -122,8 +131,15 @@ export function requestForm(values: Record<string, string>, errorText: string | 
       <label>Job title (optional) <input name="jobTitle" maxlength="120" autocomplete="organization-title" value="${v('jobTitle')}"></label>
       <label>How many vehicles a year, roughly? (optional) <select name="volume"><option value="">Not sure</option>${volumes}</select></label>
       <label>Anything 2earl should know (optional) <textarea name="message" maxlength="2000" rows="4">${v('message')}</textarea></label>
+      <div class="cf-turnstile" data-sitekey="${esc(captcha?.siteKey ?? '')}" data-action="${REQUEST_ACTION}" data-language="${esc(captcha?.locale ?? 'tr')}" data-theme="light" data-size="flexible"></div>
+      <noscript><p class="hint">This form needs JavaScript for a short check against automated requests. Turn it on, or write to iletisim@emanet.dev.</p></noscript>
       <button type="submit">${icon('mail')}<span>Send request</span></button>
-    </form>`,
+    </form>
+    <script src="${TURNSTILE_ORIGIN}/turnstile/v0/api.js" async defer></script>`,
+  });
+  const closed = card({
+    title: 'Requests are closed for a moment',
+    body: '<p>The form can’t check requests right now, so it is closed. Try again later, or write to <a href="mailto:iletisim@emanet.dev">iletisim@emanet.dev</a>.</p>',
   });
   const aside = card({ title: 'What happens next', body: `${NEXT}${PRIVACY}` });
   return layout(
@@ -134,6 +150,6 @@ export function requestForm(values: Record<string, string>, errorText: string | 
       above: '<a href="/">Back</a>',
       lede: 'Only organizations 2earl has set up can use Emanet. Tell us about yours.',
     })}
-    ${split(form, aside)}`,
+    ${split(captcha ? form : closed, aside)}`,
   );
 }

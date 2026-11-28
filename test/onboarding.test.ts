@@ -185,10 +185,27 @@ describe('joining Emanet', () => {
     }
   });
 
-  it('accepts only an organization the person manages', async () => {
+  it('always makes a new organization, never takes an existing one, and keeps it', async () => {
     const { id, cookie } = await started();
-    const refused = await post(`/onboarding/${id}/org`, cookie, { mode: 'existing', org: 'org-1' });
-    expect(refused.status).toBe(422);
+    const page = await (
+      await request(`/onboarding/${id}/org`, { headers: { Cookie: cookie } })
+    ).text();
+    expect(page).not.toContain('name="org"');
+    // An old form naming an existing organization still gets a new one, never org-1.
+    const made = await post(`/onboarding/${id}/org`, cookie, {
+      mode: 'existing',
+      org: 'org-1',
+      name: 'Örnek Bank',
+    });
+    expect(made.status).toBe(303);
+    const again = await post(`/onboarding/${id}/org`, cookie, { name: 'Başka' });
+    expect(again.status).toBe(422);
+    expect(await again.text()).toContain('can’t be changed');
+    const done = await (
+      await request(`/onboarding/${id}/org`, { headers: { Cookie: cookie } })
+    ).text();
+    expect(done).toContain('Created:');
+    expect(done).not.toContain('org-1');
   });
 
   it('sends someone still joining to their application from the start page', async () => {

@@ -78,6 +78,43 @@ jobs:
               echo "$name will be created"
             fi
           done
+          # Cloudflare Turnstile for the invitation request form (src/captcha.ts): one widget for
+          # kurumsal.emanet.dev, made (or its secret renewed) with this token. The token needs the
+          # "Turnstile Sites Write" permission. Without it the deploy goes on, the form stays
+          # closed (it fails closed), and this warns until the permission is there.
+          if echo "$list" | grep -q '"TURNSTILE_SECRET"' && echo "$list" | grep -q '"TURNSTILE_SITE_KEY"'; then
+            echo "Turnstile keys exist"
+          else
+            account=$(grep -o '"account_id": "[0-9a-f]*"' wrangler.jsonc | grep -o '[0-9a-f]\{32\}')
+            api="https://api.cloudflare.com/client/v4/accounts/$account/challenges/widgets"
+            auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+            widgets=$(curl -sS -H "$auth" "$api?per_page=100" || echo '{}')
+            if [ "$(echo "$widgets" | jq -r '.success // false')" != "true" ]; then
+              echo "::warning::Turnstile keys not made: the Cloudflare API token can't manage Turnstile (give it Turnstile Sites Write). The invitation request form stays closed."
+              echo "### Turnstile not set up" >> "$GITHUB_STEP_SUMMARY"
+              echo "Give this repository's CLOUDFLARE_API_TOKEN the permission **Turnstile Sites Write**, then re-run this deploy. Until then the invitation request form is closed." >> "$GITHUB_STEP_SUMMARY"
+            else
+              sitekey=$(echo "$widgets" | jq -r '[(.result // [])[] | select(.name == "emanet-kurumsal")][0].sitekey // empty')
+              if [ -n "$sitekey" ]; then
+                made=$(curl -sS -X POST -H "$auth" -H 'Content-Type: application/json' \
+                  --data '{"invalidate_immediately":true}' "$api/$sitekey/rotate_secret")
+              else
+                made=$(curl -sS -X POST -H "$auth" -H 'Content-Type: application/json' \
+                  --data '{"name":"emanet-kurumsal","domains":["kurumsal.emanet.dev"],"mode":"managed","region":"world"}' "$api")
+              fi
+              site=$(echo "$made" | jq -r '.result.sitekey // empty')
+              site=${site:-$sitekey}
+              secret=$(echo "$made" | jq -r '.result.secret // empty')
+              if [ -z "$site" ] || [ -z "$secret" ]; then
+                echo "::warning::Turnstile answered without keys; the invitation request form stays closed."
+              else
+                echo "::add-mask::$secret"
+                jq --arg s "$site" --arg k "$secret" '. + {TURNSTILE_SITE_KEY: $s, TURNSTILE_SECRET: $k}' "$file" > "$file.tmp"
+                mv "$file.tmp" "$file"
+                echo "Turnstile keys will be created"
+              fi
+            fi
+          fi
           echo "file=$file" >> "$GITHUB_OUTPUT"
 
       # Migrations run before the new code, so the code can rely on the schema. They must stay
