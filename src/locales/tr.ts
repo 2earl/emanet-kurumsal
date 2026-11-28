@@ -18,6 +18,10 @@ export const tr: Catalog = {
   ],
   monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
   messages: {
+    Breadcrumb: 'Sayfa yolu',
+    'Where this case is': 'Bu dosya hangi aşamada',
+    '2earl checks the vehicle': '2earl aracı kontrol eder',
+    'Agents are looking': 'Görevliler arıyor',
     'Keep it running': 'Aramayı sürdürün',
     'Agents look for this vehicle until <0/>. Confirm that the seizure order still stands to keep it searchable.':
       'Görevliler bu aracı <0/> tarihine kadar arar. Aranmaya devam etmesi için yakalama şerhinin sürdüğünü onaylayın.',
