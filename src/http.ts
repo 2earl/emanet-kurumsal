@@ -17,6 +17,8 @@ export interface OrgContext {
   name: string;
   role: OrgRole;
   partner: Partner;
+  /** What the person may do here (login's authorization API). */
+  permissions: ReadonlySet<string>;
 }
 
 export type AppEnv = {
