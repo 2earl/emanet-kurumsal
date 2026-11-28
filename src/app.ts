@@ -342,7 +342,12 @@ export function createApp(now: () => number) {
       orgs(c.env).roleOf(orgId, session.uid),
       core(c.env).partner(orgId),
       orgs(c.env).membershipsOf(session.uid),
-      authz(c.env).permissionsOf({ subject: { type: 'user', id: session.uid }, orgId }),
+      authz(c.env).permissionsOf({
+        subject: { type: 'user', id: session.uid },
+        orgId,
+        // For roles an organization limited to a recent second factor or to its networks.
+        context: { aal2At: session.aal2At, ip: c.req.header('CF-Connecting-IP') ?? null },
+      }),
     ]);
     if (!role || !partner.ok) {
       return c.html(

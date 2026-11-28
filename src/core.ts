@@ -411,7 +411,7 @@ export interface Authorization {
   permissionsOf(query: {
     subject: { type: 'user' | 'service_account'; id: string };
     orgId?: string;
-    context?: { scopes?: string[] };
+    context?: { scopes?: string[]; aal2At?: number | null; ip?: string | null };
   }): Promise<{ permissions: string[]; roles: string[]; baseRole: string | null }>;
 }
 export const authz = (env: Env): Authorization => env.AUTHZ as unknown as Authorization;
