@@ -319,6 +319,8 @@ export interface PartnerApi {
     attachmentId: string,
   ): Promise<Result<{ file_ref: string; name: string; content_type: string }>>;
   myTickets(orgId: string): Promise<Result<Ticket[]>>;
+  /** Three-in-four first-answer time, last `days` days; null until enough answers. */
+  supportAnswerTime(): Promise<Result<{ p75: number | null; days: number }>>;
   myTicket(orgId: string, ticketId: string): Promise<Result<TicketThread>>;
   replyTicket(
     orgId: string,

@@ -98,6 +98,7 @@ describe('what a partner sees', () => {
       })
     ).text();
     expect(form).toContain('value="EMN2026000000001"');
+    expect(form).toContain('3 in 4 questions got a first answer within 3 days');
   });
 
   it('lets a company write to support; an auditor only reads', async () => {

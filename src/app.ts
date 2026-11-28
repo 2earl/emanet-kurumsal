@@ -61,6 +61,7 @@ import {
   reportPage,
   supportList,
   supportNew,
+  answerTimeLine,
   supportThread,
 } from './partner-pages';
 import { apiDocs } from './api-docs';
@@ -718,12 +719,27 @@ export function createApp(now: () => number) {
     return c.html(supportList(nav(c), result.value, canAsk(c), supportDone(c)));
   });
 
-  app.get('/o/:org/support/new', (c) => {
+  /** The answer-time line; empty before core has it, or if it fails. */
+  const answerTime = async (c: AppContext) => {
+    try {
+      const result = await core(c.env).supportAnswerTime();
+      return result.ok ? answerTimeLine(result.value.p75, result.value.days) : '';
+    } catch {
+      return '';
+    }
+  };
+
+  app.get('/o/:org/support/new', async (c) => {
     if (!canAsk(c)) return forbidden(c);
     // `about` is what the question is about (an invoice number, a case): it starts the subject.
     const about = (c.req.query('about') ?? '').trim().slice(0, 80);
     return c.html(
-      supportNew(nav(c), { category: c.req.query('category') ?? 'other', subject: about }, null),
+      supportNew(
+        nav(c),
+        { category: c.req.query('category') ?? 'other', subject: about },
+        null,
+        await answerTime(c),
+      ),
     );
   });
 
@@ -756,7 +772,8 @@ export function createApp(now: () => number) {
     if (!canAsk(c)) return forbidden(c);
     const { values, files } = await supportForm(c);
     const stored = await storeAttachments(c.env.EVIDENCE, files, `partner:${org(c).orgId}`);
-    if (!stored.ok) return c.html(supportNew(nav(c), values, errorText(stored.error)), 422);
+    if (!stored.ok)
+      return c.html(supportNew(nav(c), values, errorText(stored.error), await answerTime(c)), 422);
     const result = await core(c.env).openTicket(org(c).orgId, uid(c), {
       subject: values.subject ?? '',
       category: values.category ?? '',
@@ -765,7 +782,7 @@ export function createApp(now: () => number) {
     });
     if (!result.ok) {
       await dropAttachments(c.env.EVIDENCE, stored.value);
-      return c.html(supportNew(nav(c), values, errorText(result.error)), 422);
+      return c.html(supportNew(nav(c), values, errorText(result.error), await answerTime(c)), 422);
     }
     return c.redirect(`/o/${org(c).orgId}/support/${result.value.id}?done=ticket_sent`, 303);
   });
