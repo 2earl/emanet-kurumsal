@@ -1,3 +1,4 @@
+import type { AttachmentInput } from './attachments';
 /**
  * The contract with emanet-core's `PartnerApi` entrypoint (2earl/emanet-core src/index.ts), as
  * this app uses it. The core is the source of truth; keep these types in step with it.
@@ -260,6 +261,8 @@ export interface TicketMessage {
   author_kind: 'requester' | 'staff' | 'note';
   body: string;
   created_at: number;
+  /** Older core versions send none. */
+  attachments?: { id: string; name: string; content_type: string; size: number }[];
 }
 
 export interface TicketThread {
@@ -308,11 +311,22 @@ export interface PartnerApi {
   openTicket(
     orgId: string,
     userId: string,
-    input: { subject: string; category: string; message: string },
+    input: { subject: string; category: string; message: string; attachments?: AttachmentInput[] },
   ): Promise<Result<{ id: string }>>;
+  ticketAttachment(
+    orgId: string,
+    ticketId: string,
+    attachmentId: string,
+  ): Promise<Result<{ file_ref: string; name: string; content_type: string }>>;
   myTickets(orgId: string): Promise<Result<Ticket[]>>;
   myTicket(orgId: string, ticketId: string): Promise<Result<TicketThread>>;
-  replyTicket(orgId: string, userId: string, ticketId: string, body: string): Promise<Result<null>>;
+  replyTicket(
+    orgId: string,
+    userId: string,
+    ticketId: string,
+    body: string,
+    attachments?: AttachmentInput[],
+  ): Promise<Result<null>>;
   closeTicket(orgId: string, userId: string, ticketId: string): Promise<Result<null>>;
   report(orgId: string): Promise<Result<Report>>;
   onboardingInvitation(token: string): Promise<Result<InvitationView>>;

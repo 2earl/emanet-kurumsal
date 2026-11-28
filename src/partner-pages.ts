@@ -8,6 +8,7 @@ import type {
   Report,
   TimelineEvent,
 } from './core';
+import { fileSize } from './attachments';
 import { icon } from './icons';
 import { crumbs, data, day, esc, layout, lira, moment, plate, type Nav } from './pages';
 
@@ -251,6 +252,28 @@ const TICKET_LABEL: Record<Ticket['status'], string> = {
   closed: 'Solved',
 };
 
+/** The file picker of a support form: what may be attached, said before choosing. */
+const filesField = () =>
+  `<label>Photos or PDF files (optional) <input type="file" name="files" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf">
+     <span class="hint">Up to three files, 10 MB each: a screenshot, a document, an export. Never a password or an API key.</span></label>`;
+
+/** The files of one message: pictures as thumbnails, PDFs as links with their size. */
+function messageFiles(
+  orgId: string,
+  ticketId: string,
+  files: TicketThread['messages'][number]['attachments'],
+): string {
+  if (!files?.length) return '';
+  return `<ul class="files">${files
+    .map((f) => {
+      const href = `/o/${esc(orgId)}/support/${esc(ticketId)}/files/${esc(f.id)}`;
+      return f.content_type.startsWith('image/')
+        ? `<li><a href="${href}" target="_blank" rel="noopener"><img src="${href}" alt="${esc(f.name)}" loading="lazy"></a></li>`
+        : `<li><a class="file" href="${href}">${icon('file')}<span translate="no">${esc(f.name)}</span> <span class="hint" translate="no">${esc(fileSize(f.size))}</span></a></li>`;
+    })
+    .join('')}</ul>`;
+}
+
 export function supportList(
   nav: Nav,
   list: Ticket[],
@@ -298,10 +321,11 @@ export function supportNew(
     `${crumbs([`<a href="/o/${esc(org.id)}/support">Support</a>`, 'New message'])}
      <h1>New message</h1>
      ${errorText ? `<p class="error">${esc(errorText)}</p>` : ''}
-     <form method="post" action="/o/${esc(org.id)}/support/new" class="stack">
+     <form method="post" action="/o/${esc(org.id)}/support/new" class="stack" enctype="multipart/form-data">
        <label>What is it about? <select name="category">${options}</select></label>
        <label>Subject <input name="subject" required minlength="3" maxlength="120" value="${esc(values.subject ?? '')}"></label>
        <label>Message <textarea name="message" required minlength="3" maxlength="4000" rows="6">${esc(values.message ?? '')}</textarea></label>
+       ${filesField()}
        <button type="submit">Send</button>
      </form>`,
   );
@@ -326,14 +350,15 @@ export function supportThread(
      <ul class="cards">${t.messages
        .map(
          (m) =>
-           `<li class="card${m.author_kind === 'staff' ? ' staff' : ''}"><p class="hint">${m.author_kind === 'staff' ? '2earl' : 'Your team'} · ${moment(m.created_at)}</p><p style="white-space:pre-wrap">${data(m.body)}</p></li>`,
+           `<li class="card${m.author_kind === 'staff' ? ' staff' : ''}"><p class="hint">${m.author_kind === 'staff' ? '2earl' : 'Your team'} · ${moment(m.created_at)}</p><p style="white-space:pre-wrap">${data(m.body)}</p>${messageFiles(org.id, t.ticket.id, m.attachments)}</li>`,
        )
        .join('')}</ul>
      ${errorText ? `<p class="error">${esc(errorText)}</p>` : ''}
      ${
        canWrite
-         ? `<form method="post" action="/o/${esc(org.id)}/support/${esc(t.ticket.id)}/reply" class="stack">
+         ? `<form method="post" action="/o/${esc(org.id)}/support/${esc(t.ticket.id)}/reply" class="stack" enctype="multipart/form-data">
        <label>${closed ? 'Write again to reopen this' : 'Your reply'} <textarea name="message" required minlength="2" maxlength="4000" rows="4"></textarea></label>
+       ${filesField()}
        <button type="submit">Send</button>
      </form>
      ${closed ? '' : `<form method="post" action="/o/${esc(org.id)}/support/${esc(t.ticket.id)}/close"><button class="link" type="submit">Close this message, it is solved</button></form>`}`

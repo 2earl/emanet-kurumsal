@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { reportCsv } from '../src/partner-pages';
-import { caseJson, coreHooks, formOf, post, request, signIn } from './helpers';
+import { ORIGIN, caseJson, coreHooks, formOf, post, request, signIn } from './helpers';
 
 beforeEach(async () => {
   await coreHooks().testReset();
@@ -141,6 +141,34 @@ describe('what a partner sees', () => {
     expect((await request('/o/org-1/support/nope', { headers: { Cookie: member } })).status).toBe(
       404,
     );
+  });
+
+  it('attaches a picture to a support message and serves it sandboxed to the company only', async () => {
+    const member = await signIn('member-1');
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
+    const form = new FormData();
+    form.set('subject', 'Ekran görüntüsü');
+    form.set('category', 'integration');
+    form.set('message', 'Hata ekte.');
+    form.append('files', new File([png], 'hata.png', { type: 'image/png' }));
+    const sent = await request('/o/org-1/support/new', {
+      method: 'POST',
+      headers: { Cookie: member, Origin: ORIGIN },
+      body: form,
+    });
+    expect(sent.status).toBe(303);
+    const where = (sent.headers.get('Location') ?? '').split('?')[0] ?? '';
+    const page = await (await request(where, { headers: { Cookie: member } })).text();
+    const link = /<img src="([^"]+)"/.exec(page)?.[1] ?? '';
+    expect(link).toMatch(/\/files\//);
+    const file = await request(link, { headers: { Cookie: member } });
+    expect(file.headers.get('Content-Type')).toBe('image/png');
+    expect(file.headers.get('Content-Security-Policy')).toContain('sandbox');
+    const outsider = await signIn('owner-1!aal2');
+    expect(
+      (await request(link.replace('/o/org-1/', '/o/org-2/'), { headers: { Cookie: outsider } }))
+        .status,
+    ).not.toBe(200);
   });
 
   it('reports by month and city, and as CSV a spreadsheet can’t run', async () => {

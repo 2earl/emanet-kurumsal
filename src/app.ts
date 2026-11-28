@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { attachmentResponse, dropAttachments, storeAttachments } from './attachments';
 import { routePath } from 'hono/route';
 import { createApi } from './api';
 import {
@@ -86,6 +87,10 @@ const list = (value: unknown): string[] =>
 
 /** What a person reads for each core error code. */
 const ERROR_TEXT: Record<string, string> = {
+  too_many_files: 'Attach at most three files.',
+  file_too_large: 'A file is larger than 10 MB.',
+  file_type: 'Attach photos (JPEG, PNG, WebP, HEIC) or PDF files only.',
+  invalid_file: 'A file couldn’t be read. Choose it again.',
   invalid_subject: 'Give your message a title of at least 3 characters.',
   invalid_message: 'Write your message first.',
   invalid_category: 'Choose what your message is about.',
@@ -204,7 +209,15 @@ export function createApp(now: () => number) {
     }
     await next();
     c.res = new Response(c.res.body, c.res);
+    // A route may tighten the policy (a stored file gets `sandbox` too); it never loosens it.
+    const extra = c.res.headers.get('Content-Security-Policy');
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) c.res.headers.set(name, value);
+    if (extra === 'sandbox') {
+      c.res.headers.set(
+        'Content-Security-Policy',
+        `${SECURITY_HEADERS['Content-Security-Policy'] ?? ''}; sandbox`,
+      );
+    }
     if (!c.res.headers.has('Cache-Control')) c.res.headers.set('Cache-Control', 'no-store');
   });
 
@@ -714,19 +727,44 @@ export function createApp(now: () => number) {
     );
   });
 
-  app.post('/o/:org/support/new', async (c) => {
-    if (!canAsk(c)) return forbidden(c);
-    const form = await c.req.parseBody();
+  /** A support form: its text fields, and the files chosen in it (several under `files`). */
+  const supportForm = async (c: AppContext) => {
+    const form = await c.req.parseBody({ all: true });
     const values: Record<string, string> = {};
     for (const [key, value] of Object.entries(form)) {
-      values[key] = typeof value === 'string' ? value.trim() : '';
+      const first: unknown = Array.isArray(value) ? value[0] : value;
+      if (typeof first === 'string') values[key] = first.trim();
     }
+    const raw: unknown = form.files;
+    const files: unknown[] = Array.isArray(raw) ? raw : raw === undefined ? [] : [raw];
+    return { values, files };
+  };
+
+  app.get('/o/:org/support/:id/files/:file', async (c) => {
+    const found = await core(c.env).ticketAttachment(
+      org(c).orgId,
+      c.req.param('id'),
+      c.req.param('file'),
+    );
+    const notFound = () =>
+      c.html(pages.problem(nav(c), 'Not found', 'This file doesn’t exist.'), 404);
+    if (!found.ok) return notFound();
+    return (await attachmentResponse(c.env.EVIDENCE, found.value)) ?? notFound();
+  });
+
+  app.post('/o/:org/support/new', async (c) => {
+    if (!canAsk(c)) return forbidden(c);
+    const { values, files } = await supportForm(c);
+    const stored = await storeAttachments(c.env.EVIDENCE, files, `partner:${org(c).orgId}`);
+    if (!stored.ok) return c.html(supportNew(nav(c), values, errorText(stored.error)), 422);
     const result = await core(c.env).openTicket(org(c).orgId, uid(c), {
       subject: values.subject ?? '',
       category: values.category ?? '',
       message: values.message ?? '',
+      ...(stored.value.length ? { attachments: stored.value } : {}),
     });
     if (!result.ok) {
+      await dropAttachments(c.env.EVIDENCE, stored.value);
       return c.html(supportNew(nav(c), values, errorText(result.error)), 422);
     }
     return c.redirect(`/o/${org(c).orgId}/support/${result.value.id}?done=ticket_sent`, 303);
@@ -744,10 +782,18 @@ export function createApp(now: () => number) {
 
   app.post('/o/:org/support/:id/reply', async (c) => {
     if (!canAsk(c)) return forbidden(c);
-    const form = await c.req.parseBody();
-    const message = typeof form.message === 'string' ? form.message.trim() : '';
-    const result = await core(c.env).replyTicket(org(c).orgId, uid(c), c.req.param('id'), message);
+    const { values, files } = await supportForm(c);
+    const stored = await storeAttachments(c.env.EVIDENCE, files, `partner:${org(c).orgId}`);
+    if (!stored.ok) return showTicket(c, errorText(stored.error), 422);
+    const result = await core(c.env).replyTicket(
+      org(c).orgId,
+      uid(c),
+      c.req.param('id'),
+      values.message ?? '',
+      stored.value,
+    );
     if (!result.ok) {
+      await dropAttachments(c.env.EVIDENCE, stored.value);
       return result.error === 'not_found'
         ? c.html(pages.problem(nav(c), 'Not found', 'This message doesn’t exist.'), 404)
         : showTicket(c, errorText(result.error), 422);
