@@ -34,6 +34,7 @@ export const REQUEST_ERROR: Record<string, string> = {
   invalid_volume: 'Choose how many vehicles, or leave it empty.',
   already_requested: 'You have already sent a request. 2earl’s team will answer it by email.',
   too_many_requests: 'You have sent three requests in the last 30 days. Try again later.',
+  account_deleted: 'This 2earl account was deleted. Sign in with another account.',
   captcha_missing: 'Complete the check above the button, then send again.',
   captcha_failed: 'The check didn’t pass. Do it again, then send.',
   captcha_unavailable:
