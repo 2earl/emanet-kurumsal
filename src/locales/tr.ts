@@ -272,6 +272,8 @@ export const tr: Catalog = {
       'IP adresi veya yerel ad değil, herkese açık bir alan adı kullanın.',
     'The address is too long.': 'Adres çok uzun.',
     'Choose at least one event.': 'En az bir olay seçin.',
+    'This organization has as many webhooks as it may. Delete one first.':
+      'Bu kurum izin verilen sayıda webhook’a ulaştı. Önce birini silin.',
     'This organization has 5 webhooks. Delete one first.':
       'Bu kuruluşun 5 webhook’u var. Önce birini silin.',
 

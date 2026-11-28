@@ -316,6 +316,8 @@ export interface PartnerApi {
   partner(orgId: string): Promise<Result<Partner>>;
   /** A webhook was switched off after failing: the core mails the operations contact. */
   webhookDisabled(orgId: string, host: string): Promise<Result<{ emailed: boolean }>>;
+  /** The limits staff set for integrations. */
+  limits(): Promise<Result<{ webhook_disable_after: number; max_webhooks: number }>>;
   /** Records a change to API keys or webhooks in the core's audit log. */
   recordIntegration(
     orgId: string,
