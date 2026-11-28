@@ -302,10 +302,27 @@ export function supportList(
   );
 }
 
+/**
+ * How soon companies' questions were answered lately (core's three-in-four time, last 30 days),
+ * rounded up. Nothing when core has too few answers to say.
+ */
+export function answerTimeLine(p75: number | null, days: number): string {
+  if (p75 === null) return '';
+  const hours = Math.max(1, Math.ceil(p75 / 3600));
+  const text =
+    hours === 1
+      ? `In the last ${String(days)} days, 3 in 4 questions got a first answer within an hour.`
+      : hours < 48
+        ? `In the last ${String(days)} days, 3 in 4 questions got a first answer within ${String(hours)} hours.`
+        : `In the last ${String(days)} days, 3 in 4 questions got a first answer within ${String(Math.ceil(hours / 24))} days.`;
+  return `<p class="hint">${esc(text)}</p>`;
+}
+
 export function supportNew(
   nav: Nav,
   values: Record<string, string>,
   errorText: string | null,
+  answerTime = '',
 ): string {
   const org = nav.org;
   if (!org) throw new Error('supportNew needs an organization');
@@ -320,6 +337,7 @@ export function supportNew(
     { ...nav, current: 'support' },
     `${crumbs([`<a href="/o/${esc(org.id)}/support">Support</a>`, 'New message'])}
      <h1>New message</h1>
+     ${answerTime}
      ${errorText ? `<p class="error">${esc(errorText)}</p>` : ''}
      <form method="post" action="/o/${esc(org.id)}/support/new" class="stack" enctype="multipart/form-data">
        <label>What is it about? <select name="category">${options}</select></label>

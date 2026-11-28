@@ -222,6 +222,9 @@ export class PartnerApi extends WorkerEntrypoint {
         attachments: files.map(({ id: fid, name, content_type, size }) => ({ id: fid, name, content_type, size })) }] });
     return ok({ id });
   }
+  async supportAnswerTime() {
+    return ok({ p75: 50 * 3600, days: 30 });
+  }
   async myTickets(orgId) {
     if (!PARTNERS[orgId]) return fail('not_a_partner');
     return ok([...tickets.values()].filter((t) => t.orgId === orgId).map((t) => t.ticket));

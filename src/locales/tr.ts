@@ -637,6 +637,12 @@ export const tr: Catalog = {
     'Not confirmed': 'Onaylanmadı',
     'This vehicle has been reported as delivered to a custodian car park, and 2earl is checking it. The case can’t be changed or withdrawn until that is decided.':
       'Bu aracın yediemin otoparkına teslim edildiği bildirildi ve 2earl bildirimi inceliyor. Karar verilene kadar dosya değiştirilemez veya geri çekilemez.',
+    'In the last {0} days, 3 in 4 questions got a first answer within an hour.':
+      'Son {0} günde soruların 4’te 3’ü bir saat içinde ilk yanıtını aldı.',
+    'In the last {0} days, 3 in 4 questions got a first answer within {1} hours.':
+      'Son {0} günde soruların 4’te 3’ü {1} saat içinde ilk yanıtını aldı.',
+    'In the last {0} days, 3 in 4 questions got a first answer within {1} days.':
+      'Son {0} günde soruların 4’te 3’ü {1} gün içinde ilk yanıtını aldı.',
     'Something went wrong': 'Bir sorun oluştu',
     'That didn’t work, and 2earl has been told. Try again in a moment.':
       'İşlem tamamlanamadı; 2earl’e bildirildi. Biraz sonra yeniden deneyin.',
