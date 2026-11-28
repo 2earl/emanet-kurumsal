@@ -18,6 +18,9 @@ export const tr: Catalog = {
   ],
   monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
   messages: {
+    'Switched off: the person who added it no longer manages integrations here':
+      'Kapatıldı: ekleyen kişi artık burada entegrasyonları yönetmiyor',
+    'Switched off while the organization wasn’t active': 'Kuruluş etkin değilken kapatıldı',
     '2earl uses what you write here only to answer your request. It is deleted a year after the team answers, or when you delete your 2earl account. The check against automated requests is Cloudflare Turnstile.':
       '2earl buraya yazdıklarınızı yalnızca isteğinizi yanıtlamak için kullanır. Ekip yanıtladıktan bir yıl sonra ya da 2earl hesabınızı sildiğinizde silinir. Otomatik isteklere karşı denetim Cloudflare Turnstile ile yapılır.',
     'Complete the check above the button, then send again.':
