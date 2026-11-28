@@ -15,7 +15,8 @@ import {
 } from './auth';
 import {
   CASE_STATUSES,
-  can,
+  authz,
+  type Permission,
   core,
   orgs,
   type CaseInput,
@@ -337,10 +338,11 @@ export function createApp(now: () => number) {
     const session = c.get('session');
     if (!session) return c.redirect(`/signin?return=${encodeURIComponent(c.req.path)}`, 302);
     const orgId = c.req.param('org') ?? '';
-    const [role, partner, memberships] = await Promise.all([
+    const [role, partner, memberships, granted] = await Promise.all([
       orgs(c.env).roleOf(orgId, session.uid),
       core(c.env).partner(orgId),
       orgs(c.env).membershipsOf(session.uid),
+      authz(c.env).permissionsOf({ subject: { type: 'user', id: session.uid }, orgId }),
     ]);
     if (!role || !partner.ok) {
       return c.html(
@@ -365,7 +367,14 @@ export function createApp(now: () => number) {
     const name = memberships.find((m) => m.orgId === orgId)?.name ?? partner.value.legalName;
     const tickets = await core(c.env).myTickets(orgId);
     const answers = tickets.ok ? tickets.value.filter((t) => t.status === 'answered').length : 0;
-    c.set('org', { orgId, name, role, partner: partner.value, answers });
+    c.set('org', {
+      orgId,
+      name,
+      role,
+      partner: partner.value,
+      permissions: new Set(granted.permissions),
+      answers,
+    });
     await next();
     return undefined;
   };
@@ -373,6 +382,8 @@ export function createApp(now: () => number) {
   app.use('/o/:org/*', orgGate);
 
   const org = (c: AppContext) => c.get('org');
+  /** Whether the person may do this here (login's authorization API, read in orgGate). */
+  const may = (c: AppContext, permission: Permission) => org(c).permissions.has(permission);
   const uid = (c: AppContext) => c.get('session')?.uid ?? '';
   const forbidden = (c: AppContext) =>
     c.html(
@@ -400,7 +411,7 @@ export function createApp(now: () => number) {
         counts.value,
         [...recent.value.cases].reverse(),
         expiring,
-        can.writeCases(org(c).role),
+        may(c, 'emanet:cases.write'),
         Number.isInteger(confirmed) && confirmed > 0
           ? confirmed === 1
             ? 'Confirmed one case.'
@@ -412,7 +423,7 @@ export function createApp(now: () => number) {
 
   // Several cases confirmed at once, from the overview.
   app.post('/o/:org/cases/confirm', async (c) => {
-    if (!can.writeCases(org(c).role)) return forbidden(c);
+    if (!may(c, 'emanet:cases.write')) return forbidden(c);
     const form = await c.req.parseBody({ all: true });
     const ids = list(form.case_ids).slice(0, 200);
     if (ids.length === 0) return c.redirect(`/o/${org(c).orgId}`, 303);
@@ -450,12 +461,12 @@ export function createApp(now: () => number) {
   }
 
   app.get('/o/:org/cases/new', async (c) => {
-    if (!can.writeCases(org(c).role)) return forbidden(c);
+    if (!may(c, 'emanet:cases.write')) return forbidden(c);
     return c.html(pages.caseForm(nav(c), await schemaOf(c), {}, null, c.get('locale')));
   });
 
   app.post('/o/:org/cases/new', async (c) => {
-    if (!can.writeCases(org(c).role)) return forbidden(c);
+    if (!may(c, 'emanet:cases.write')) return forbidden(c);
     const form = await c.req.parseBody();
     const values: Record<string, string> = {};
     for (const [key, value] of Object.entries(form)) values[key] = text(value);
@@ -552,7 +563,7 @@ export function createApp(now: () => number) {
       pages.caseDetail(
         nav(c),
         result.value,
-        can.writeCases(org(c).role),
+        may(c, 'emanet:cases.write'),
         notice,
         labels,
         caseExtras(
@@ -560,7 +571,7 @@ export function createApp(now: () => number) {
           result.value.id,
           events.ok ? events.value : [],
           documents.ok ? documents.value : [],
-          org(c).role !== 'auditor',
+          may(c, 'emanet:cases.write'),
         ),
       ),
     );
@@ -630,8 +641,8 @@ export function createApp(now: () => number) {
 
   // ---- Support ----------------------------------------------------------------------------------
 
-  /** Auditors read; everyone else may write to 2earl. */
-  const canAsk = (c: AppContext) => org(c).role !== 'auditor';
+  /** Whoever may change cases may write to 2earl; auditors read. */
+  const canAsk = (c: AppContext) => may(c, 'emanet:cases.write');
   const SUPPORT_DONE: Record<string, string> = {
     ticket_sent: 'Sent. We answer here and email you when we do.',
     ticket_replied: 'Sent.',
@@ -722,7 +733,7 @@ export function createApp(now: () => number) {
   });
 
   app.post('/o/:org/cases/:id/withdraw', async (c) => {
-    if (!can.writeCases(org(c).role)) return forbidden(c);
+    if (!may(c, 'emanet:cases.write')) return forbidden(c);
     const form = await c.req.parseBody();
     const result = await core(c.env).withdrawCase(
       org(c).orgId,
@@ -736,7 +747,7 @@ export function createApp(now: () => number) {
   });
 
   app.post('/o/:org/cases/:id/confirm', async (c) => {
-    if (!can.writeCases(org(c).role)) return forbidden(c);
+    if (!may(c, 'emanet:cases.write')) return forbidden(c);
     await core(c.env).confirmCases(org(c).orgId, uid(c), [c.req.param('id')]);
     return c.redirect(`/o/${org(c).orgId}/cases/${c.req.param('id')}?confirmed=1`, 303);
   });
@@ -744,7 +755,7 @@ export function createApp(now: () => number) {
   // ---- CSV upload -----------------------------------------------------------------------------
 
   app.get('/o/:org/upload', (c) => {
-    if (!can.writeCases(org(c).role)) return forbidden(c);
+    if (!may(c, 'emanet:cases.write')) return forbidden(c);
     return c.html(pages.upload(nav(c), null, null, null));
   });
 
@@ -757,7 +768,7 @@ export function createApp(now: () => number) {
   });
 
   app.post('/o/:org/upload', async (c) => {
-    if (!can.writeCases(org(c).role)) return forbidden(c);
+    if (!may(c, 'emanet:cases.write')) return forbidden(c);
     const form = await c.req.parseBody();
     const file = form.file;
     if (!(file instanceof File) || file.size === 0) {
@@ -790,7 +801,7 @@ export function createApp(now: () => number) {
   });
 
   app.post('/o/:org/upload/:id', async (c) => {
-    if (!can.writeCases(org(c).role)) return forbidden(c);
+    if (!may(c, 'emanet:cases.write')) return forbidden(c);
     // Used once: a second click can't import twice.
     const row = await c.env.DB.prepare(
       'DELETE FROM uploads WHERE id = ? AND org_id = ? AND uid = ? AND expires_at > ? RETURNING cases',
@@ -819,7 +830,7 @@ export function createApp(now: () => number) {
 
   // ---- API keys and webhooks (owners and admins, with a fresh second factor) --------------------
 
-  const integrations = (c: AppContext) => can.manageIntegrations(org(c).role);
+  const integrations = (c: AppContext) => may(c, 'emanet:integrations.manage');
   /**
    * Keys and webhooks act for the whole organization, so who made, revoked or deleted one goes to
    * the core's audit log. The change itself never waits on, or fails with, the record.

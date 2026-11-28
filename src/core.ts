@@ -394,13 +394,20 @@ export interface OrganizationDirectory {
 export const orgs = (env: Env): OrganizationDirectory =>
   env.ORGS as unknown as OrganizationDirectory;
 
-/** What each organization role may do here. */
-export const can = {
-  /** Add, change, confirm and withdraw cases; upload CSV. */
-  writeCases: (role: OrgRole) => role !== 'auditor',
-  /** API keys and webhooks: they act for the whole organization. */
-  manageIntegrations: (role: OrgRole) => role === 'owner' || role === 'admin',
-};
+/**
+ * What a person may do in an organization here, from login's authorization API (2earl/login
+ * docs/AUTHORIZATION.md): their role's default permissions plus any role the organization gave
+ * them. Read live on every request, never cached.
+ */
+export type Permission = 'emanet:cases.read' | 'emanet:cases.write' | 'emanet:integrations.manage';
+export interface Authorization {
+  permissionsOf(query: {
+    subject: { type: 'user' | 'service_account'; id: string };
+    orgId?: string;
+    context?: { scopes?: string[] };
+  }): Promise<{ permissions: string[]; roles: string[]; baseRole: string | null }>;
+}
+export const authz = (env: Env): Authorization => env.AUTHZ as unknown as Authorization;
 
 /** login's OrganizationProvisioning (2earl/login src/org-provisioning.ts). */
 export interface OrganizationProvisioning {

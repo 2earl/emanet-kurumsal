@@ -51,6 +51,14 @@
     { "binding": "ORGS", "service": "login", "entrypoint": "OrganizationDirectory" },
     // Creates an invited company's organization (docs/DESIGN.md §5, Onboarding).
     { "binding": "ORG_PROVISIONING", "service": "login", "entrypoint": "OrganizationProvisioning" },
+    // What each person may do here: their role's permissions and any role the organization
+    // gave them (login docs/AUTHORIZATION.md). Answers only about Emanet's own permissions.
+    {
+      "binding": "AUTHZ",
+      "service": "login",
+      "entrypoint": "Authorization",
+      "props": { "service": "emanet" },
+    },
     // Emanet's data and rules: this app may only do what a creditor may (emanet-core).
     { "binding": "CORE", "service": "emanet-core", "entrypoint": "PartnerApi" },
   ],
