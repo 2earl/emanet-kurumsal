@@ -19,6 +19,8 @@ export interface OrgContext {
   partner: Partner;
   /** What the person may do here (login's authorization API). */
   permissions: ReadonlySet<string>;
+  /** Support messages 2earl has answered and nobody has replied to yet. */
+  answers: number;
 }
 
 export type AppEnv = {

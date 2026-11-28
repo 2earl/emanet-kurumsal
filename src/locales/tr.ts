@@ -27,6 +27,8 @@ export const tr: Catalog = {
     'Something else': 'Başka bir konu',
     'Ask 2earl about a case, an invoice or the integration. We answer here and email whoever asked.':
       '2earl’e bir dosya, fatura ya da entegrasyonla ilgili soru sorun. Yanıtı burada veririz ve soran kişiye e-postayla haber veririz.',
+    '2earl answered your message': '2earl mesajınızı yanıtladı',
+    'Read the answer': 'Yanıtı okuyun',
     'Ask about this case': 'Bu dosya hakkında soru sor',
     'Ask about this invoice': 'Bu fatura hakkında soru sor',
     'Give your message a title of at least 3 characters.':
