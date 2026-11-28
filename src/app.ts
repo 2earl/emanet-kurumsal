@@ -25,6 +25,7 @@ import {
   type CaseStatus,
   type FieldDefinition,
   type PlaceKind,
+  type Province,
   PLACE_KINDS,
 } from './core';
 import { MAX_BYTES, parseCases, parseDate, templateCsv, typedValue } from './csv';
@@ -104,6 +105,9 @@ const ERROR_TEXT: Record<string, string> = {
   invalid_icra_file: 'Enter the enforcement office and the file number.',
   invalid_serh_date: 'The seizure order date isn’t valid.',
   invalid_place: 'Each place needs an address, a district and a city.',
+  'invalid_place:address': 'Each place needs an address.',
+  'invalid_place:city': 'The city must be one of Turkey’s 81 provinces.',
+  'invalid_place:district': 'That district isn’t in the chosen province. Pick it from the list.',
   invalid_external_ref: 'Enter your reference.',
   duplicate_case: 'You already have an open case for this vehicle under another reference.',
   case_closed: 'This case is closed.',
@@ -116,8 +120,12 @@ const ERROR_TEXT: Record<string, string> = {
   invalid_field: 'A field has a value that isn’t allowed.',
   unknown_field: 'A field isn’t known for your organization.',
 };
-const errorText = (error: string, detail?: string) =>
-  `${ERROR_TEXT[error] ?? 'That didn’t work.'}${detail ? ` (${detail})` : ''}`;
+const errorText = (error: string, detail?: string) => {
+  // A text for the error with this detail says it all; otherwise the detail follows.
+  const exact = detail ? ERROR_TEXT[`${error}:${detail}`] : undefined;
+  if (exact) return exact;
+  return `${ERROR_TEXT[error] ?? 'That didn’t work.'}${detail ? ` (${detail})` : ''}`;
+};
 
 export function createApp(now: () => number) {
   const app = new Hono<AppEnv>();
@@ -522,9 +530,21 @@ export function createApp(now: () => number) {
     };
   }
 
+  /** Core's list of provinces; null before core has it (the form then asks for text). */
+  const provincesOf = async (c: AppContext): Promise<Province[] | null> => {
+    try {
+      const result = await core(c.env).provinces();
+      return result.ok ? result.value : null;
+    } catch {
+      return null;
+    }
+  };
+
   app.get('/o/:org/cases/new', async (c) => {
     if (!may(c, 'emanet:cases.write')) return forbidden(c);
-    return c.html(pages.caseForm(nav(c), await schemaOf(c), {}, null, c.get('locale')));
+    return c.html(
+      pages.caseForm(nav(c), await schemaOf(c), {}, null, c.get('locale'), await provincesOf(c)),
+    );
   });
 
   app.post('/o/:org/cases/new', async (c) => {
@@ -548,8 +568,9 @@ export function createApp(now: () => number) {
     const vehicleAttrs = attrs('vehicle', fields.vehicle);
     const placeAttrs = attrs('place', fields.place);
     const bad = [caseAttrs, vehicleAttrs, placeAttrs].find((a) => 'error' in a);
+    const provinces = await provincesOf(c);
     const render = (error: string, status: 422 | 409 = 422) =>
-      c.html(pages.caseForm(nav(c), fields, values, error, c.get('locale')), status);
+      c.html(pages.caseForm(nav(c), fields, values, error, c.get('locale'), provinces), status);
     if (bad && 'error' in bad) return render(errorText('invalid_field', bad.error));
     const year = values.year?.trim() ? Number(values.year) : undefined;
     const input: CaseInput = {

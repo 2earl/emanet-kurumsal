@@ -18,6 +18,13 @@ export const CASE_STATUSES: readonly CaseStatus[] = [
 export type PlaceKind = 'owner_home' | 'work' | 'last_seen' | 'other';
 export const PLACE_KINDS: readonly PlaceKind[] = ['owner_home', 'work', 'last_seen', 'other'];
 
+/** A province (il) with its districts (ilçe), from core's list. */
+export interface Province {
+  code: string;
+  name: string;
+  districts: string[];
+}
+
 export interface PlaceInput {
   kind: PlaceKind;
   address: string;
@@ -321,6 +328,8 @@ export interface PartnerApi {
   myTickets(orgId: string): Promise<Result<Ticket[]>>;
   /** Three-in-four first-answer time, last `days` days; null until enough answers. */
   supportAnswerTime(): Promise<Result<{ p75: number | null; days: number }>>;
+  /** Turkey's 81 provinces with their districts, as core stores places. */
+  provinces(): Promise<Result<Province[]>>;
   myTicket(orgId: string, ticketId: string): Promise<Result<TicketThread>>;
   replyTicket(
     orgId: string,

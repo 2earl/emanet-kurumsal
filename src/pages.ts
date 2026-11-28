@@ -1,4 +1,4 @@
-import type { CaseStatus, CaseView, FieldDefinition, OrgRole } from './core';
+import type { CaseStatus, CaseView, FieldDefinition, OrgRole, Province } from './core';
 import { PLACE_KINDS } from './core';
 import { icon, scene, type IconName } from './icons';
 import { currentLocale, languageSwitcher } from './i18n';
@@ -475,12 +475,36 @@ export interface CaseFormValues {
   [key: string]: string;
 }
 
+/**
+ * City and district of a place. The city is one of the 81 provinces; the district is typed with
+ * the province's districts offered (all districts until a city is chosen, since the page runs no
+ * script). Core accepts any spelling and stores the official one.
+ */
+function placeInputs(provinces: Province[] | null, city: string, district: string): string {
+  if (provinces === null) {
+    return `<label>District<input name="district" value="${esc(district)}" maxlength="60"></label>
+         <label>City<input name="city" value="${esc(city)}" maxlength="60"></label>`;
+  }
+  const chosen = provinces.find((p) => p.name === city);
+  const offered = chosen
+    ? chosen.districts
+    : [...new Set(provinces.flatMap((p) => p.districts))].sort((a, b) => a.localeCompare(b, 'tr'));
+  return `<label>City<select name="city" autocomplete="address-level1">
+           <option value="">Choose a province</option>
+           ${provinces.map((p) => `<option value="${esc(p.name)}"${p.name === city ? ' selected' : ''} translate="no">${esc(p.name)}</option>`).join('')}
+         </select></label>
+         <label>District<input name="district" value="${esc(district)}" maxlength="60" list="districts" autocomplete="address-level2"></label>
+         <datalist id="districts">${offered.map((d) => `<option value="${esc(d)}">`).join('')}</datalist>`;
+}
+
 export function caseForm(
   nav: Nav,
   fields: { case: FieldDefinition[]; vehicle: FieldDefinition[]; place: FieldDefinition[] },
   values: CaseFormValues,
   error: string | null,
   locale: 'en' | 'tr',
+  /** Core's provinces and districts; null before core offers them (then both are typed). */
+  provinces: Province[] | null = null,
 ): string {
   const org = nav.org;
   if (!org) throw new Error('caseForm needs an organization');
@@ -546,8 +570,7 @@ export function caseForm(
          <div class="grid2">
          <label>Kind<select name="place_kind">${PLACE_KINDS.map((k) => `<option value="${k}"${values.place_kind === k ? ' selected' : ''}>${PLACE_LABEL[k]}</option>`).join('')}</select></label>
          ${input('address', 'Address', 'maxlength="300"')}
-         ${input('district', 'District', 'maxlength="60"')}
-         ${input('city', 'City', 'maxlength="60"')}
+         ${placeInputs(provinces, values.city ?? '', values.district ?? '')}
          ${customPlace}
        </div></fieldset>
        <div><button type="submit">Add vehicle</button></div>
