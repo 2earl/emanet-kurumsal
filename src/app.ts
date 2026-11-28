@@ -554,6 +554,7 @@ export function createApp(now: () => number) {
           result.value.id,
           events.ok ? events.value : [],
           documents.ok ? documents.value : [],
+          org(c).role !== 'auditor',
         ),
       ),
     );
@@ -640,7 +641,11 @@ export function createApp(now: () => number) {
 
   app.get('/o/:org/support/new', (c) => {
     if (!canAsk(c)) return forbidden(c);
-    return c.html(supportNew(nav(c), { category: c.req.query('category') ?? 'other' }, null));
+    // `about` is what the question is about (an invoice number, a case): it starts the subject.
+    const about = (c.req.query('about') ?? '').trim().slice(0, 80);
+    return c.html(
+      supportNew(nav(c), { category: c.req.query('category') ?? 'other', subject: about }, null),
+    );
   });
 
   app.post('/o/:org/support/new', async (c) => {
