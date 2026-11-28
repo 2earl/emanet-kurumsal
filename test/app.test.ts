@@ -157,6 +157,26 @@ describe('pages', () => {
     expect((await request('/o/org-1/keys', { headers: { Cookie: auditor } })).status).toBe(403);
   });
 
+  it('says so when Emanet isn’t turned on, or is paused, for the organization in login', async () => {
+    const authz = env.AUTHZ as unknown as {
+      testEnrol(orgId: string, status: 'active' | 'suspended' | null): Promise<void>;
+    };
+    const owner = await signIn('owner-1');
+    try {
+      await authz.testEnrol('org-1', null);
+      const off = await request('/o/org-1', { headers: { Cookie: owner } });
+      expect(off.status).toBe(403);
+      expect(await off.text()).toContain('isn’t turned on yet');
+      await authz.testEnrol('org-1', 'suspended');
+      expect(await (await request('/o/org-1', { headers: { Cookie: owner } })).text()).toContain(
+        'paused',
+      );
+    } finally {
+      await authz.testEnrol('org-1', 'active');
+    }
+    expect((await request('/o/org-1', { headers: { Cookie: owner } })).status).toBe(200);
+  });
+
   it('refuses forms from other sites', async () => {
     const member = await signIn('member-1');
     const response = await request('/o/org-1/cases/new', {

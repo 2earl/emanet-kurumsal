@@ -484,6 +484,13 @@ export interface Authorization {
     orgId?: string;
     context?: { scopes?: string[]; aal2At?: number | null; ip?: string | null };
   }): Promise<{ permissions: string[]; roles: string[]; baseRole: string | null }>;
+  /**
+   * Whether the organization uses Emanet in login (login DESIGN §4.35): 2earl staff turn the app
+   * on once the agreement is in place; until then its people hold nothing here.
+   */
+  customer(query: {
+    orgId: string;
+  }): Promise<{ status: 'active' | 'suspended'; name: string; since: number } | null>;
 }
 export const authz = (env: Env): Authorization => env.AUTHZ as unknown as Authorization;
 

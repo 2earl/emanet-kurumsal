@@ -238,6 +238,12 @@ export const tr: Catalog = {
       'Hesabınız Emanet kullanan bir kuruluşa bağlı değil. Kuruluşunuzun yöneticisinden davet isteyin ya da iletisim@emanet.dev adresine yazın.',
     'Choose an organization': 'Bir kuruluş seçin',
     'Not active yet': 'Henüz etkin değil',
+    'Emanet isn’t turned on yet': 'Emanet henüz açılmadı',
+    'Emanet is paused for this organization': 'Emanet bu kuruluş için durduruldu',
+    'This organization is set up, but 2earl hasn’t turned Emanet on for it in your 2earl account yet. It happens once the agreement is in place; write to iletisim@emanet.dev if it takes long.':
+      'Bu kuruluş kuruldu, ancak 2earl henüz 2earl hesabınızda bu kuruluş için Emanet’i açmadı. Sözleşme yapıldığında açılır; uzun sürerse iletisim@emanet.dev adresine yazın.',
+    '2earl has paused this organization’s use of Emanet. Write to iletisim@emanet.dev if you think that’s a mistake.':
+      '2earl bu kuruluşun Emanet kullanımını durdurdu. Bunun bir hata olduğunu düşünüyorsanız iletisim@emanet.dev adresine yazın.',
     '2earl hasn’t activated this organization in Emanet yet.':
       '2earl bu kuruluşu Emanet’te henüz etkinleştirmedi.',
     'This organization doesn’t exist or you aren’t a member.':
