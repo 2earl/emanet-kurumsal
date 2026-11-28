@@ -127,6 +127,13 @@ const errorText = (error: string, detail?: string) => {
   return `${ERROR_TEXT[error] ?? 'That didn’t work.'}${detail ? ` (${detail})` : ''}`;
 };
 
+/** What a page says after cases were confirmed from it. */
+function confirmedText(value: string | undefined): string | null {
+  const confirmed = Number(value);
+  if (!Number.isInteger(confirmed) || confirmed <= 0) return null;
+  return confirmed === 1 ? 'Confirmed one case.' : `Confirmed ${String(confirmed)} cases.`;
+}
+
 export function createApp(now: () => number) {
   const app = new Hono<AppEnv>();
 
@@ -431,7 +438,6 @@ export function createApp(now: () => number) {
       .filter((x) => x.expires_at <= soon)
       .sort((a, b) => a.expires_at - b.expires_at)
       .slice(0, 50);
-    const confirmed = Number(c.req.query('confirmed'));
     // Most recent first on the overview.
     return c.html(
       pages.dashboard(
@@ -440,11 +446,7 @@ export function createApp(now: () => number) {
         [...recent.value.cases].reverse(),
         expiring,
         may(c, 'emanet:cases.write'),
-        Number.isInteger(confirmed) && confirmed > 0
-          ? confirmed === 1
-            ? 'Confirmed one case.'
-            : `Confirmed ${String(confirmed)} cases.`
-          : null,
+        confirmedText(c.req.query('confirmed')),
       ),
     );
   });
@@ -458,7 +460,15 @@ export function createApp(now: () => number) {
     const result = await core(c.env).confirmCases(org(c).orgId, uid(c), ids);
     if (!result.ok)
       return c.html(pages.problem(nav(c), 'Not confirmed', errorText(result.error)), 422);
-    return c.redirect(`/o/${org(c).orgId}?confirmed=${String(result.value.confirmed)}`, 303);
+    // Back to the list the cases were chosen on, if that is where they came from.
+    const listPath = `/o/${org(c).orgId}/cases`;
+    const back = typeof form.back === 'string' ? form.back : '';
+    const to =
+      back === listPath ||
+      (back.startsWith(`${listPath}?`) && /^[\w=&%.+-]*$/.test(back.slice(listPath.length + 1)))
+        ? `${back}${back.includes('?') ? '&' : '?'}confirmed=${String(result.value.confirmed)}`
+        : `/o/${org(c).orgId}?confirmed=${String(result.value.confirmed)}`;
+    return c.redirect(to, 303);
   });
 
   app.get('/o/:org/cases', async (c) => {
@@ -483,6 +493,8 @@ export function createApp(now: () => number) {
         result.value.next_cursor,
         search,
         c.get('now'),
+        may(c, 'emanet:cases.write'),
+        confirmedText(c.req.query('confirmed')),
       ),
     );
   });

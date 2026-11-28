@@ -672,5 +672,7 @@ export const tr: Catalog = {
     'Send vehicles': 'Araç gönderin',
     'Straight from your systems': 'Doğrudan sistemlerinizden',
     'Vehicle and enforcement file': 'Araç ve icra dosyası',
+    'Confirm the cases whose seizure order still stands: they stay searchable for another period.':
+      'Yakalama şerhi hâlâ geçerli olan dosyaları onaylayın; bir dönem daha aramada kalırlar.',
   },
 };

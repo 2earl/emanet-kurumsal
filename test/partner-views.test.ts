@@ -231,6 +231,29 @@ describe('the overview', () => {
     ).toContain('Confirmed one case.');
     const auditor = await signIn('auditor-1');
     expect((await post('/o/org-1/cases/confirm', auditor, { case_ids: [id] })).status).toBe(403);
+    // From the cases list: a box on each open case, and back to the same list after confirming.
+    const list = await (
+      await request('/o/org-1/cases?status=active', { headers: { Cookie: member } })
+    ).text();
+    expect(list).toContain(`name="case_ids" value="${id}"`);
+    expect(list).toContain('Confirm the chosen cases');
+    const back = await post('/o/org-1/cases/confirm', member, {
+      case_ids: [id],
+      back: '/o/org-1/cases?status=active',
+    });
+    expect(back.headers.get('Location')).toBe('/o/org-1/cases?status=active&confirmed=1');
+    expect(
+      await (await request('/o/org-1/cases?confirmed=1', { headers: { Cookie: member } })).text(),
+    ).toContain('Confirmed one case.');
+    // Anywhere else is not a place to go back to.
+    const elsewhere = await post('/o/org-1/cases/confirm', member, {
+      case_ids: [id],
+      back: 'https://evil.example/o/org-1/cases',
+    });
+    expect(elsewhere.headers.get('Location')).toBe('/o/org-1?confirmed=1');
+    // An auditor sees no boxes.
+    const read = await (await request('/o/org-1/cases', { headers: { Cookie: auditor } })).text();
+    expect(read).not.toContain('name="case_ids"');
   });
 
   it('keeps API keys and webhooks under one section', async () => {

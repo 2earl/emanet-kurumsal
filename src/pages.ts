@@ -361,21 +361,25 @@ function caseTable(
   cases: CaseView[],
   now: number | null = null,
   empty = 'No cases here yet.',
+  /** A box on each open case, to confirm several at once. */
+  selectable = false,
 ): string {
   if (cases.length === 0) {
     return `<div class="panel empty">${scene('inbox')}<p>${empty}</p></div>`;
   }
-  return `<table class="cases">
-    <thead><tr><th>Plate</th><th>Vehicle</th><th>Your reference</th><th>Status</th><th class="num">Fee</th><th>Expires</th></tr></thead>
+  const open = (c: CaseView) => c.status === 'active' || c.status === 'pending_identity';
+  return `<table class="cases${selectable ? ' selectable' : ''}">
+    <thead><tr>${selectable ? '<th class="pick"><span class="visually-hidden">Choose</span></th>' : ''}<th>Plate</th><th>Vehicle</th><th>Your reference</th><th>Status</th><th class="num">Fee</th><th>Expires</th></tr></thead>
     <tbody>${cases
       .map(
         (c) => `<tr>
-          <td><a href="/o/${orgId}/cases/${c.id}">${plate(c.vehicle.plate)}</a></td>
-          <td>${data(`${c.vehicle.make} ${c.vehicle.model}${c.vehicle.year ? ` ${String(c.vehicle.year)}` : ''}`)}</td>
-          <td>${data(c.external_ref)}</td>
-          <td>${status(c.status)}</td>
-          <td class="num">${lira(c.fee_kurus)}</td>
-          <td>${expiry(c, now)}</td>
+          ${selectable ? `<td class="pick">${open(c) ? `<input type="checkbox" name="case_ids" value="${esc(c.id)}" aria-label="${esc(c.vehicle.plate)}" translate="no">` : ''}</td>` : ''}
+          <td class="c-plate"><a href="/o/${orgId}/cases/${c.id}">${plate(c.vehicle.plate)}</a></td>
+          <td class="c-vehicle">${data(`${c.vehicle.make} ${c.vehicle.model}${c.vehicle.year ? ` ${String(c.vehicle.year)}` : ''}`)}</td>
+          <td class="c-ref">${data(c.external_ref)}</td>
+          <td class="c-status">${status(c.status)}</td>
+          <td class="num c-fee">${lira(c.fee_kurus)}</td>
+          <td class="c-expires">${expiry(c, now)}</td>
         </tr>`,
       )
       .join('')}</tbody>
@@ -433,6 +437,8 @@ export function caseList(
   next: string | null,
   search = '',
   now: number | null = null,
+  canWrite = false,
+  noticeText: string | null = null,
 ): string {
   const org = nav.org;
   if (!org) throw new Error('caseList needs an organization');
@@ -466,10 +472,12 @@ export function caseList(
     : filter
       ? 'No cases with this status.'
       : 'No cases here yet.';
+  const selectable =
+    canWrite && cases.some((x) => x.status === 'active' || x.status === 'pending_identity');
   return layout(
     'Cases',
     { ...nav, current: 'cases' },
-    `${pageHead({
+    `${noticeText ? `<p class="notice">${esc(noticeText)}</p>` : ''}${pageHead({
       title: 'Cases',
       lede: 'Most recently changed first.',
       ...(cases.length
@@ -481,8 +489,16 @@ export function caseList(
      <section class="card flush">
        <div class="card-head"><div class="card-tools">${searchForm}</div></div>
        ${filters}
-       <div class="card-body"><div class="table-wrap">${caseTable(org.id, cases, now, empty)}</div></div>
-       ${more ? `<div class="card-foot"><span></span>${more}</div>` : ''}
+       ${
+         selectable
+           ? `<form method="post" action="/o/${org.id}/cases/confirm">
+               <input type="hidden" name="back" value="/o/${org.id}/cases${keep('') ? `?${keep('')}` : ''}">
+               <div class="card-body"><div class="table-wrap">${caseTable(org.id, cases, now, empty, true)}</div></div>
+               <div class="card-foot"><span>Confirm the cases whose seizure order still stands: they stay searchable for another period.</span><span class="foot-actions"><button type="submit">Confirm the chosen cases</button>${more}</span></div>
+             </form>`
+           : `<div class="card-body"><div class="table-wrap">${caseTable(org.id, cases, now, empty)}</div></div>
+              ${more ? `<div class="card-foot"><span></span>${more}</div>` : ''}`
+       }
      </section>`,
   );
 }
