@@ -49,6 +49,8 @@ import {
 import { KeyError, createKey, listKeys, revokeKey } from './keys';
 import { registerOnboarding } from './onboarding';
 import { caseExtras, invoiceDetail, invoiceList, reportCsv, reportPage } from './partner-pages';
+import { apiDocs } from './api-docs';
+import { openapi, toYaml } from './openapi';
 import * as pages from './pages';
 import {
   WebhookError,
@@ -219,7 +221,23 @@ export function createApp(now: () => number) {
     return c.html(pages.orgPicker(partners));
   });
 
-  app.get('/docs/api', (c) => c.html(pages.apiDocs(c.env.SITE_ORIGIN)));
+  app.get('/docs/api', (c) => c.html(apiDocs(c.env.SITE_ORIGIN)));
+
+  // The same reference for machines: import it into Postman, Insomnia or a code generator.
+  // Public and readable from other origins, like the page; it describes the API, not anyone's data.
+  app.get('/docs/openapi.json', (c) => {
+    const response = c.json(openapi(c.env.SITE_ORIGIN));
+    response.headers.set('Cache-Control', 'public, max-age=300');
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    return response;
+  });
+  app.get('/docs/openapi.yaml', (c) => {
+    const response = c.text(toYaml(openapi(c.env.SITE_ORIGIN)));
+    response.headers.set('Content-Type', 'application/yaml; charset=utf-8');
+    response.headers.set('Cache-Control', 'public, max-age=300');
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    return response;
+  });
 
   app.get('/oauth/client.json', (c) => {
     const response = c.json(clientMetadata(c.env));

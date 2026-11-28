@@ -1,5 +1,6 @@
 import type { CaseStatus, CaseView, FieldDefinition, OrgRole } from './core';
 import { PLACE_KINDS } from './core';
+import { icon, scene, type IconName } from './icons';
 import { currentLocale, languageSwitcher } from './i18n';
 import { KEY_SCOPES, type ApiKey } from './keys';
 import { EVENT_TYPES, type Delivery, type Webhook } from './webhooks';
@@ -17,6 +18,9 @@ export function esc(value: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+/** Text written in both languages where it is used; whatever shows it marks it translate="no". */
+export const L = (en: string, tr: string) => (currentLocale() === 'tr' ? tr : en);
 
 export const data = (value: string) => `<span translate="no">${esc(value)}</span>`;
 
@@ -50,6 +54,14 @@ const STATUS_LABEL: Record<CaseStatus, string> = {
   expired: 'Expired',
 };
 
+const STATUS_ICON: Record<CaseStatus, IconName> = {
+  active: 'search',
+  pending_identity: 'clock',
+  delivered: 'check',
+  withdrawn: 'undo',
+  expired: 'alert',
+};
+
 export const status = (value: CaseStatus) =>
   `<span class="status ${value}">${STATUS_LABEL[value]}</span>`;
 
@@ -69,17 +81,17 @@ export const moment = (unix: number) =>
 
 export function layout(title: string, nav: Nav, body: string): string {
   const org = nav.org;
-  const link = (key: NonNullable<Nav['current']>, href: string, label: string) =>
-    `<a href="${href}"${nav.current === key ? ' aria-current="page"' : ''}>${label}</a>`;
+  const link = (key: NonNullable<Nav['current']>, href: string, label: string, glyph: IconName) =>
+    `<a href="${href}"${nav.current === key ? ' aria-current="page"' : ''}>${icon(glyph)}<span>${label}</span></a>`;
   const orgNav = org
     ? `<nav aria-label="Sections">
-        ${link('dashboard', `/o/${org.id}`, 'Overview')}
-        ${link('cases', `/o/${org.id}/cases`, 'Cases')}
-        ${org.role === 'auditor' ? '' : link('new', `/o/${org.id}/cases/new`, 'Add a vehicle')}
-        ${org.role === 'auditor' ? '' : link('upload', `/o/${org.id}/upload`, 'Upload CSV')}
-        ${link('invoices', `/o/${org.id}/invoices`, 'Invoices')}
-        ${link('reports', `/o/${org.id}/reports`, 'Reports')}
-        ${org.role === 'owner' || org.role === 'admin' ? link('integrations', `/o/${org.id}/keys`, 'Integrations') : ''}
+        ${link('dashboard', `/o/${org.id}`, 'Overview', 'home')}
+        ${link('cases', `/o/${org.id}/cases`, 'Cases', 'folder')}
+        ${org.role === 'auditor' ? '' : link('new', `/o/${org.id}/cases/new`, 'Add a vehicle', 'plus')}
+        ${org.role === 'auditor' ? '' : link('upload', `/o/${org.id}/upload`, 'Upload CSV', 'upload')}
+        ${link('invoices', `/o/${org.id}/invoices`, 'Invoices', 'invoice')}
+        ${link('reports', `/o/${org.id}/reports`, 'Reports', 'chart')}
+        ${org.role === 'owner' || org.role === 'admin' ? link('integrations', `/o/${org.id}/keys`, 'Integrations', 'plug') : ''}
       </nav>`
     : '';
   const who = nav.signedIn
@@ -134,7 +146,8 @@ export function home(): string {
   return layout(
     'Vehicle recovery for creditors',
     { signedIn: false },
-    `<section class="hero">
+    `<section class="hero with-scene">
+      <div>
       <h1>Find vehicles that carry your seizure orders.</h1>
       <p class="lede">Add the vehicles your enforcement files allow you to take. Verified field agents look for them, report them to the police, and follow them to a custodian car park. You see each step, and you pay only for vehicles that reach custody.</p>
       <p><a class="button" href="/signin">Sign in with 2earl</a></p>
@@ -144,6 +157,8 @@ export function home(): string {
         <li>Access only for organizations set up by 2earl.</li>
       </ul>
       <p class="hint">New to Emanet? <a href="https://emanet.dev">See how it works</a>, or write to <a href="mailto:iletisim@emanet.dev">iletisim@emanet.dev</a>.</p>
+      </div>
+      ${scene('road')}
     </section>`,
   );
 }
@@ -173,12 +188,12 @@ export function dashboard(
   const tiles = (['active', 'pending_identity', 'delivered', 'expired', 'withdrawn'] as const)
     .map(
       (s) =>
-        `<a href="/o/${org.id}/cases?status=${s}"><strong translate="no">${String(counts[s])}</strong><span>${STATUS_LABEL[s]}</span></a>`,
+        `<a class="tile ${s}" href="/o/${org.id}/cases?status=${s}">${icon(STATUS_ICON[s])}<strong translate="no">${String(counts[s])}</strong><span>${STATUS_LABEL[s]}</span></a>`,
     )
     .join('');
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const actions = canWrite
-    ? `<p class="actions"><a class="button" href="/o/${org.id}/cases/new">Add a vehicle</a> <a class="button secondary" href="/o/${org.id}/upload">Upload CSV</a></p>`
+    ? `<p class="actions"><a class="button" href="/o/${org.id}/cases/new">${icon('plus')}<span>Add a vehicle</span></a> <a class="button secondary" href="/o/${org.id}/upload">${icon('upload')}<span>Upload CSV</span></a> <a class="button secondary" href="/docs/api">${icon('code')}<span>API</span></a></p>`
     : '';
   const soon = expiring.length
     ? `<h2>Expiring within three days</h2>
@@ -208,14 +223,16 @@ export function dashboard(
      ${soon}
      ${
        total === 0
-         ? `<div class="panel empty"><h2>No vehicles yet</h2><p>Add your first vehicle with the form, upload a CSV file, or connect your systems with the <a href="/docs/api">API</a>.</p></div>`
+         ? `<div class="panel empty">${scene('plate')}<h2>No vehicles yet</h2><p>Add your first vehicle with the form, upload a CSV file, or connect your systems with the <a href="/docs/api">API</a>.</p></div>`
          : `<h2>Recently changed</h2>${caseTable(org.id, recent)}`
      }`,
   );
 }
 
 function caseTable(orgId: string, cases: CaseView[]): string {
-  if (cases.length === 0) return '<p class="panel">No cases here yet.</p>';
+  if (cases.length === 0) {
+    return `<div class="panel empty">${scene('inbox')}<p>No cases here yet.</p></div>`;
+  }
   return `<table class="cases">
     <thead><tr><th>Plate</th><th>Vehicle</th><th>Your reference</th><th>Status</th><th class="num">Fee</th><th>Expires</th></tr></thead>
     <tbody>${cases
@@ -541,45 +558,5 @@ export function webhooksPage(
      ${rows}
      <h2>New webhook</h2>${form}
      <h2>Recent deliveries</h2>${log}`,
-  );
-}
-
-export function apiDocs(origin: string): string {
-  const e = esc(origin);
-  return layout(
-    'API',
-    { signedIn: false },
-    `<h1>API</h1>
-     <p class="lede">JSON over HTTPS, one organization per key. Create keys under API keys (owners and admins).</p>
-     <h2>Authentication</h2>
-     <p>Send the key as a Bearer token: <code translate="no">Authorization: Bearer emk_…</code>. Limit: 300 requests a minute per key.</p>
-     <h2>Endpoints</h2>
-     <table><thead><tr><th>Request</th><th>Permission</th><th>What it does</th></tr></thead><tbody>
-       <tr><td><code translate="no">GET ${e}/api/v1/schema</code></td><td translate="no">cases:read</td><td>Your custom fields</td></tr>
-       <tr><td><code translate="no">POST ${e}/api/v1/cases</code></td><td translate="no">cases:write</td><td>Add a case, or update the one with the same external_ref</td></tr>
-       <tr><td><code translate="no">GET ${e}/api/v1/cases?status=&amp;updated_since=&amp;cursor=&amp;limit=</code></td><td translate="no">cases:read</td><td>List your cases</td></tr>
-       <tr><td><code translate="no">GET ${e}/api/v1/cases/{id}</code></td><td translate="no">cases:read</td><td>One case</td></tr>
-       <tr><td><code translate="no">POST ${e}/api/v1/cases/confirm</code></td><td translate="no">cases:write</td><td>Confirm cases are still enforceable</td></tr>
-       <tr><td><code translate="no">POST ${e}/api/v1/cases/{id}/withdraw</code></td><td translate="no">cases:write</td><td>Withdraw a case</td></tr>
-       <tr><td><code translate="no">GET ${e}/api/v1/events?cursor=</code></td><td translate="no">events:read</td><td>Events, oldest first, if you poll instead of using webhooks</td></tr>
-       <tr><td><code translate="no">GET ${e}/api/v1/cases/{id}/timeline</code></td><td translate="no">cases:read</td><td>A case’s states and times</td></tr>
-       <tr><td><code translate="no">GET ${e}/api/v1/invoices</code></td><td translate="no">invoices:read</td><td>Your invoices</td></tr>
-       <tr><td><code translate="no">GET ${e}/api/v1/invoices/{id}</code></td><td translate="no">invoices:read</td><td>An invoice with its cases</td></tr>
-     </tbody></table>
-     <h2>A case</h2>
-     <pre class="secret" translate="no">{
-  "external_ref": "K-2026-0001",
-  "vin": "VF1RJA00061234567",
-  "plate": "34 ABC 123",
-  "make": "Renault", "model": "Clio", "year": 2021, "colour": "Beyaz",
-  "icra_office": "İstanbul 5. İcra Dairesi", "icra_file_no": "2026/12345",
-  "serh_date": "2026-10-01", "legal_basis": "rehin",
-  "places": [{ "kind": "owner_home", "address": "…", "district": "Kadıköy", "city": "İstanbul" }],
-  "attributes": {}, "vehicle_attributes": {}
-}</pre>
-     <h2>Errors</h2>
-     <p>Errors are <code translate="no">{ "error": "code", "detail": "…" }</code> with status 400, 401, 403, 404, 409 (duplicate_case, case_closed, vin_mismatch, conflict_retry, delivery_in_review), 422 (invalid input) or 429.</p>
-     <h2>Webhook signatures</h2>
-     <p>Each call carries <code translate="no">Emanet-Signature: t=&lt;unix time&gt;,v1=&lt;hex&gt;</code>, where the hex is HMAC-SHA256 of <code translate="no">&lt;t&gt;.&lt;body&gt;</code> with the webhook’s secret. Refuse calls more than five minutes old, and use <code translate="no">Emanet-Event-Id</code> to ignore repeats.</p>`,
   );
 }

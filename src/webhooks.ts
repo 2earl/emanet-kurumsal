@@ -18,6 +18,7 @@ export const EVENT_TYPES = [
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
+/** Used when the core can't be asked; staff set the real limits in Merkez's settings. */
 const MAX_WEBHOOKS_PER_ORG = 5;
 const TIMEOUT_MS = 10_000;
 /** Seconds to wait after each failed attempt; after the last, the delivery is given up. */
@@ -127,8 +128,10 @@ export async function createWebhook(
   const count = await env.DB.prepare('SELECT count(*) AS n FROM webhooks WHERE org_id = ?')
     .bind(input.orgId)
     .first<{ n: number }>();
-  if ((count?.n ?? 0) >= MAX_WEBHOOKS_PER_ORG) {
-    throw new WebhookError('This organization has 5 webhooks. Delete one first.');
+  const limits = await core(env).limits();
+  const most = limits.ok ? limits.value.max_webhooks : MAX_WEBHOOKS_PER_ORG;
+  if ((count?.n ?? 0) >= most) {
+    throw new WebhookError('This organization has as many webhooks as it may. Delete one first.');
   }
   const secret = `whsec_${randomToken(32)}`;
   const id = crypto.randomUUID();
@@ -286,6 +289,7 @@ export async function sendDue(
   now: number,
   fetcher: typeof fetch = fetch,
 ): Promise<number> {
+  let disableAfter: number | undefined;
   const { results } = await env.DB.prepare(
     `SELECT d.id, d.webhook_id, d.event_id, d.payload, d.attempts, w.url, w.secret_enc
      FROM deliveries d JOIN webhooks w ON w.id = d.webhook_id
@@ -340,6 +344,10 @@ export async function sendDue(
       continue;
     }
     const wait = BACKOFF[attempts - 1];
+    disableAfter ??= await core(env)
+      .limits()
+      .then((limits) => (limits.ok ? limits.value.webhook_disable_after : DISABLE_AFTER))
+      .catch(() => DISABLE_AFTER);
     const [, hook] = await env.DB.batch<{
       org_id: string;
       url: string;
@@ -356,7 +364,7 @@ export async function sendDue(
         `UPDATE webhooks SET consecutive_failures = consecutive_failures + 1,
            disabled_at = CASE WHEN consecutive_failures + 1 >= ? THEN ? ELSE disabled_at END
          WHERE id = ? AND disabled_at IS NULL RETURNING org_id, url, disabled_at`,
-      ).bind(DISABLE_AFTER, now, delivery.webhook_id),
+      ).bind(disableAfter, now, delivery.webhook_id),
     ]);
     // Switched off just now: the company's operations contact is told (the core mails them) and
     // staff see it. Told once: a webhook already off isn't counted again.

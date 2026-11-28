@@ -94,6 +94,7 @@ export class PartnerApi extends WorkerEntrypoint {
   async recordIntegration(orgId, actor, action, what) { integrations.push([orgId, actor, action, what]); return ok(null); }
   async testIntegrations() { return integrations; }
   async reportError() {}
+  async limits() { return ok({ webhook_disable_after: 20, max_webhooks: 5 }); }
   async webhookDisabled(orgId, host) { integrations.push([orgId, 'system', 'webhook_disabled', host]); return ok({ emailed: true }); }
   async upsertCase(orgId, actor, input) {
     const p = PARTNERS[orgId];
