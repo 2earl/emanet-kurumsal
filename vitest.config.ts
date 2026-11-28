@@ -215,9 +215,11 @@ export class PartnerApi extends WorkerEntrypoint {
     if (input.message.length < 3) return fail('invalid_message');
     if (!['case', 'invoice', 'integration', 'account', 'other'].includes(input.category)) return fail('invalid_category');
     const id = 'tk-' + String(tickets.size + 1);
-    tickets.set(id, { orgId, ticket: { id, subject: input.subject, category: input.category, status: 'open',
+    const files = (input.attachments ?? []).map((f, i) => ({ id: id + '-f' + String(i + 1), ...f }));
+    tickets.set(id, { orgId, files, ticket: { id, subject: input.subject, category: input.category, status: 'open',
       created_at: now(), updated_at: now(), closed_at: null },
-      messages: [{ id: 'm1', author_kind: 'requester', body: input.message, created_at: now() }] });
+      messages: [{ id: 'm1', author_kind: 'requester', body: input.message, created_at: now(),
+        attachments: files.map(({ id: fid, name, content_type, size }) => ({ id: fid, name, content_type, size })) }] });
     return ok({ id });
   }
   async myTickets(orgId) {
@@ -227,6 +229,12 @@ export class PartnerApi extends WorkerEntrypoint {
   async myTicket(orgId, id) {
     const t = tickets.get(id);
     return t && t.orgId === orgId ? ok({ ticket: t.ticket, messages: t.messages }) : fail('not_found');
+  }
+  async ticketAttachment(orgId, tid, fid) {
+    const t = tickets.get(tid);
+    if (!t || t.orgId !== orgId) return fail('not_found');
+    const f = (t.files ?? []).find((x) => x.id === fid);
+    return f ? ok({ file_ref: f.file_ref, name: f.name, content_type: f.content_type }) : fail('not_found');
   }
   async replyTicket(orgId, userId, id, body) {
     const t = tickets.get(id);

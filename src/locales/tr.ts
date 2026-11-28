@@ -18,6 +18,15 @@ export const tr: Catalog = {
   ],
   monthsShort: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
   messages: {
+    'Attach at most three files.': 'En çok üç dosya ekleyin.',
+    'A file is larger than 10 MB.': 'Bir dosya 10 MB’tan büyük.',
+    'Attach photos (JPEG, PNG, WebP, HEIC) or PDF files only.':
+      'Yalnızca fotoğraf (JPEG, PNG, WebP, HEIC) ya da PDF dosyası ekleyin.',
+    'A file couldn’t be read. Choose it again.': 'Bir dosya okunamadı. Yeniden seçin.',
+    'This file doesn’t exist.': 'Bu dosya yok.',
+    'Photos or PDF files (optional)': 'Fotoğraf ya da PDF dosyaları (isteğe bağlı)',
+    'Up to three files, 10 MB each: a screenshot, a document, an export. Never a password or an API key.':
+      'En çok üç dosya, her biri 10 MB: ekran görüntüsü, belge, dışa aktarım. Asla parola ya da API anahtarı eklemeyin.',
     'Download this list (CSV)': 'Bu listeyi indir (CSV)',
     Breadcrumb: 'Sayfa yolu',
     'Where this case is': 'Bu dosya hangi aşamada',
