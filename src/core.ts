@@ -361,7 +361,14 @@ export interface PartnerApi {
   getCase(orgId: string, caseId: string): Promise<Result<CaseView>>;
   listCases(
     orgId: string,
-    query: { status?: CaseStatus; updatedSince?: number; cursor?: string; limit?: number },
+    query: {
+      status?: CaseStatus;
+      updatedSince?: number;
+      cursor?: string;
+      limit?: number;
+      search?: string;
+      newest?: boolean;
+    },
   ): Promise<Result<{ cases: CaseView[]; next_cursor: string | null }>>;
   confirmCases(
     orgId: string,

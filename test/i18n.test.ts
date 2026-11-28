@@ -33,6 +33,8 @@ describe('Turkish', () => {
       ['/o/org-1', member],
       ['/o/org-1/cases', member],
       ['/o/org-1/cases?status=delivered', member],
+      ['/o/org-1/cases?q=nothing', member],
+      ['/o/org-1/cases?status=withdrawn', member],
       ['/o/org-1/cases/new', member],
       [`/o/org-1/cases/${caseId}`, member],
       [`/o/org-1/cases/${caseId}?saved=1`, member],

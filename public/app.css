@@ -2655,3 +2655,20 @@ figure.code pre {
 .ask-banner strong {
   display: block;
 }
+
+/* Withdrawing a case opens first: the common action (confirm) stays in front. */
+details.withdraw {
+  margin-top: 1.25rem;
+}
+details.withdraw summary {
+  cursor: pointer;
+}
+/* Outlined, so it never looks like the main action next to it. */
+button.danger {
+  background: var(--paper);
+  border: 2px solid var(--action);
+  color: var(--action);
+}
+.search label {
+  flex: 1 1 18rem;
+}
