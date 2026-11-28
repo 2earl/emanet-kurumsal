@@ -68,7 +68,14 @@ export class Authorization extends WorkerEntrypoint {
     return { permissions, roles: [], baseRole: role };
   }
   async testGive(uid, orgId, permissions) { extra.set(uid + '|' + orgId, permissions); }
+  // Every organization uses Emanet unless a test says otherwise (login's org_services).
+  async customer({ orgId }) {
+    const status = enrolment.has(orgId) ? enrolment.get(orgId) : 'active';
+    return status ? { status, name: orgId, since: 0 } : null;
+  }
+  async testEnrol(orgId, status) { enrolment.set(orgId, status); }
 }
+const enrolment = new Map();
 export default class extends WorkerEntrypoint {
   async fetch(request) {
     const url = new URL(request.url);

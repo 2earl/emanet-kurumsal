@@ -473,7 +473,7 @@ export function createApp(now: () => number) {
     const session = c.get('session');
     if (!session) return c.redirect(`/signin?return=${encodeURIComponent(c.req.path)}`, 302);
     const orgId = c.req.param('org') ?? '';
-    const [role, partner, memberships, granted] = await Promise.all([
+    const [role, partner, memberships, granted, customer] = await Promise.all([
       orgs(c.env).roleOf(orgId, session.uid),
       core(c.env).partner(orgId),
       orgs(c.env).membershipsOf(session.uid),
@@ -483,6 +483,7 @@ export function createApp(now: () => number) {
         // For roles an organization limited to a recent second factor or to its networks.
         context: { aal2At: session.aal2At, ip: c.req.header('CF-Connecting-IP') ?? null },
       }),
+      authz(c.env).customer({ orgId }),
     ]);
     if (!role || !partner.ok) {
       return c.html(
@@ -500,6 +501,19 @@ export function createApp(now: () => number) {
           { signedIn: true },
           'Not active yet',
           '2earl hasn’t activated this organization in Emanet yet.',
+        ),
+        403,
+      );
+    }
+    // In login, Emanet is turned on per organization; without it nobody here holds anything.
+    if (customer?.status !== 'active') {
+      return c.html(
+        pages.problem(
+          { signedIn: true },
+          customer ? 'Emanet is paused for this organization' : 'Emanet isn’t turned on yet',
+          customer
+            ? '2earl has paused this organization’s use of Emanet. Write to iletisim@emanet.dev if you think that’s a mistake.'
+            : 'This organization is set up, but 2earl hasn’t turned Emanet on for it in your 2earl account yet. It happens once the agreement is in place; write to iletisim@emanet.dev if it takes long.',
         ),
         403,
       );
