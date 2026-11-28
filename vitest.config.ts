@@ -45,6 +45,25 @@ export class OrganizationProvisioning extends WorkerEntrypoint {
     return { ok: true, orgId };
   }
 }
+// login's Authorization entrypoint: Emanet's defaults per role (login src/services.ts), plus
+// extra permissions some tests give with the test hook.
+const DEFAULTS = {
+  owner: ['emanet:cases.read', 'emanet:cases.write', 'emanet:integrations.manage'],
+  admin: ['emanet:cases.read', 'emanet:cases.write', 'emanet:integrations.manage'],
+  member: ['emanet:cases.read', 'emanet:cases.write'],
+  auditor: ['emanet:cases.read'],
+};
+const extra = new Map();
+export class Authorization extends WorkerEntrypoint {
+  async permissionsOf({ subject, orgId }) {
+    if (this.ctx.props?.service !== 'emanet') throw new Error('bind with props.service');
+    const role = members(subject.id).find(([o]) => o === orgId)?.[2] ?? null;
+    const given = extra.get(base(subject.id) + '|' + orgId) ?? [];
+    const permissions = role ? [...new Set([...DEFAULTS[role], ...given])].sort() : [];
+    return { permissions, roles: [], baseRole: role };
+  }
+  async testGive(uid, orgId, permissions) { extra.set(uid + '|' + orgId, permissions); }
+}
 export default class extends WorkerEntrypoint {
   async fetch(request) {
     const url = new URL(request.url);

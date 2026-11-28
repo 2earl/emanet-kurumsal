@@ -115,6 +115,21 @@ describe('pages', () => {
     expect((await request('/o/org-1/keys', { headers: { Cookie: auditor } })).status).toBe(403);
   });
 
+  it('follows what login says the person may do, not the role alone', async () => {
+    // An organization gave this auditor a role with integrations (login "Roles in apps").
+    const authz = env.AUTHZ as unknown as {
+      testGive(uid: string, orgId: string, permissions: string[]): Promise<void>;
+    };
+    await authz.testGive('auditor-1', 'org-1', ['emanet:integrations.manage']);
+    const auditor = await signIn('auditor-1');
+    expect((await request('/o/org-1/keys', { headers: { Cookie: auditor } })).status).toBe(200);
+    expect((await request('/o/org-1/cases/new', { headers: { Cookie: auditor } })).status).toBe(
+      403,
+    );
+    await authz.testGive('auditor-1', 'org-1', []);
+    expect((await request('/o/org-1/keys', { headers: { Cookie: auditor } })).status).toBe(403);
+  });
+
   it('refuses forms from other sites', async () => {
     const member = await signIn('member-1');
     const response = await request('/o/org-1/cases/new', {
