@@ -217,7 +217,7 @@ export class PartnerApi extends WorkerEntrypoint {
     if (!['case', 'invoice', 'integration', 'account', 'other'].includes(input.category)) return fail('invalid_category');
     const id = 'tk-' + String(tickets.size + 1);
     const files = (input.attachments ?? []).map((f, i) => ({ id: id + '-f' + String(i + 1), ...f }));
-    tickets.set(id, { orgId, files, ticket: { id, subject: input.subject, category: input.category, status: 'open',
+    tickets.set(id, { orgId, files, ticket: { id, subject: input.subject, category: input.category, status: 'open', rating: null,
       created_at: now(), updated_at: now(), closed_at: null },
       messages: [{ id: 'm1', author_kind: 'requester', body: input.message, created_at: now(),
         attachments: files.map(({ id: fid, name, content_type, size }) => ({ id: fid, name, content_type, size })) }] });
@@ -253,6 +253,12 @@ export class PartnerApi extends WorkerEntrypoint {
     if (body.length < 2) return fail('invalid_message');
     t.messages.push({ id: 'm' + String(t.messages.length + 1), author_kind: 'requester', body, created_at: now() });
     t.ticket.status = 'open';
+    return ok(null);
+  }
+  async rateTicket(orgId, userId, id, helped) {
+    const t = tickets.get(id);
+    if (!t || t.orgId !== orgId) return fail('not_found');
+    t.ticket.rating = helped ? 'helped' : 'not_helped';
     return ok(null);
   }
   async closeTicket(orgId, userId, id) {
