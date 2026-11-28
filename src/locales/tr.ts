@@ -674,5 +674,11 @@ export const tr: Catalog = {
     'Vehicle and enforcement file': 'Araç ve icra dosyası',
     'Confirm the cases whose seizure order still stands: they stay searchable for another period.':
       'Yakalama şerhi hâlâ geçerli olan dosyaları onaylayın; bir dönem daha aramada kalırlar.',
+    'Thank you. It helps us answer better.': 'Teşekkürler. Daha iyi yanıt vermemize yardım eder.',
+    'Did our answer help?': 'Yanıtımız işe yaradı mı?',
+    'You said it helped.': 'İşe yaradığını söylediniz.',
+    'You said it didn’t help. Write below what is still missing.':
+      'İşe yaramadığını söylediniz. Eksik kalanı aşağıya yazın.',
+    'Yes, it helped': 'Evet, işe yaradı',
   },
 };

@@ -389,6 +389,26 @@ export function supportNew(
   );
 }
 
+/** Once 2earl has answered: did it help? One click, and it can be changed. */
+function rateForm(orgId: string, t: TicketThread): string {
+  if (!t.messages.some((m) => m.author_kind === 'staff') || t.ticket.rating === undefined)
+    return '';
+  const rating = t.ticket.rating;
+  const said =
+    rating === 'helped'
+      ? 'You said it helped.'
+      : rating === 'not_helped'
+        ? 'You said it didn’t help. Write below what is still missing.'
+        : '';
+  return `<form method="post" action="/o/${esc(orgId)}/support/${esc(t.ticket.id)}/rate" class="rate">
+      <p><strong>Did our answer help?</strong>${said ? ` <span class="hint">${said}</span>` : ''}</p>
+      <div class="actions">
+        <button class="secondary" type="submit" name="helped" value="1"${rating === 'helped' ? ' aria-pressed="true"' : ''}>${icon('check')}<span>Yes, it helped</span></button>
+        <button class="secondary" type="submit" name="helped" value="0"${rating === 'not_helped' ? ' aria-pressed="true"' : ''}><span>No</span></button>
+      </div>
+    </form>`;
+}
+
 export function supportThread(
   nav: Nav,
   t: TicketThread,
@@ -411,6 +431,7 @@ export function supportThread(
            `<li class="card${m.author_kind === 'staff' ? ' staff' : ''}"><p class="hint">${m.author_kind === 'staff' ? '2earl' : 'Your team'} · ${moment(m.created_at)}</p><p style="white-space:pre-wrap">${data(m.body)}</p>${messageFiles(org.id, t.ticket.id, m.attachments)}</li>`,
        )
        .join('')}</ul>
+     ${canWrite ? rateForm(org.id, t) : ''}
      ${errorText ? `<p class="error">${esc(errorText)}</p>` : ''}
      ${
        canWrite

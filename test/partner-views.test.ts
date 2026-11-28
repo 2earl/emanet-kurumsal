@@ -128,6 +128,16 @@ describe('what a partner sees', () => {
     const thread = await (await request(where, { headers: { Cookie: member } })).text();
     expect(thread).toContain('It is on its way.');
     expect(thread).toContain('2earl answered');
+    // Did it help: one click, changeable; an auditor can't mark it.
+    expect(thread).toContain('Did our answer help?');
+    const rated = await post(`${where}/rate`, member, { helped: '1' });
+    expect(rated.headers.get('Location')).toBe(`${where}?done=ticket_rated`);
+    expect(await (await request(where, { headers: { Cookie: member } })).text()).toContain(
+      'You said it helped.',
+    );
+    expect((await post(`${where}/rate`, await signIn('auditor-1'), { helped: '0' })).status).toBe(
+      403,
+    );
     const reply = await post(`${where}/reply`, member, { message: 'Thanks' });
     expect(reply.headers.get('Location')).toBe(`${where}?done=ticket_replied`);
 

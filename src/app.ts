@@ -743,6 +743,7 @@ export function createApp(now: () => number) {
     ticket_sent: 'Sent. We answer here and email you when we do.',
     ticket_replied: 'Sent.',
     ticket_closed: 'Closed.',
+    ticket_rated: 'Thank you. It helps us answer better.',
   };
   const supportDone = (c: AppContext) => SUPPORT_DONE[c.req.query('done') ?? ''] ?? null;
 
@@ -858,6 +859,22 @@ export function createApp(now: () => number) {
       return c.html(pages.problem(nav(c), 'Not found', 'This message doesn’t exist.'), 404);
     }
     return c.redirect(`/o/${org(c).orgId}/support?done=ticket_closed`, 303);
+  });
+
+  app.post('/o/:org/support/:id/rate', async (c) => {
+    if (!canAsk(c)) return forbidden(c);
+    const id = c.req.param('id');
+    const form = await c.req.parseBody();
+    try {
+      const result = await core(c.env).rateTicket(org(c).orgId, uid(c), id, form.helped === '1');
+      if (!result.ok) {
+        return c.html(pages.problem(nav(c), 'Not found', 'This message doesn’t exist.'), 404);
+      }
+    } catch {
+      // Before core can take a mark: the page simply stays as it was.
+      return c.redirect(`/o/${org(c).orgId}/support/${id}`, 303);
+    }
+    return c.redirect(`/o/${org(c).orgId}/support/${id}?done=ticket_rated`, 303);
   });
 
   app.get('/o/:org/reports', async (c) => {
