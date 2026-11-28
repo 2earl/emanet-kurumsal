@@ -55,7 +55,11 @@ describe('pages', () => {
   it('adds a vehicle through the form, with a custom field and a Turkish date', async () => {
     const member = await signIn('member-1');
     const form = await request('/o/org-1/cases/new', { headers: { Cookie: member } });
-    expect(await form.text()).toContain('name="case.portfolio"');
+    const page = await form.text();
+    expect(page).toContain('name="case.portfolio"');
+    // The city from core's list of provinces, the district offered from the districts.
+    expect(page).toContain('<option value="İstanbul" translate="no">İstanbul</option>');
+    expect(page).toContain('<datalist id="districts">');
     const saved = await post('/o/org-1/cases/new', member, {
       plate: '34 abc 123',
       vin: 'VF1RJA00061234567',
@@ -104,6 +108,29 @@ describe('pages', () => {
     });
     expect(bad.status).toBe(422);
     expect(await bad.text()).toContain('isn’t a Turkish plate');
+
+    const nowhere = await post('/o/org-1/cases/new', member, {
+      plate: '34 abc 124',
+      vin: 'VF1RJA00061234568',
+      make: 'Renault',
+      model: 'Clio',
+      external_ref: 'K-3',
+      icra_office: 'İstanbul 5. İcra Dairesi',
+      icra_file_no: '2026/2',
+      serh_date: '2026-10-01',
+      legal_basis: 'rehin',
+      place_kind: 'work',
+      address: 'İş Merkezi',
+      district: 'Merkez',
+      city: 'İstanbul',
+    });
+    expect(nowhere.status).toBe(422);
+    const again = await nowhere.text();
+    expect(again).toContain('That district isn’t in the chosen province.');
+    // The chosen city stays chosen, and only its districts are offered.
+    expect(again).toContain('<option value="İstanbul" selected translate="no">');
+    expect(again).toContain('<option value="Kadıköy">');
+    expect(again).not.toContain('<option value="Çankaya">');
   });
 
   it('lets auditors read but not write', async () => {

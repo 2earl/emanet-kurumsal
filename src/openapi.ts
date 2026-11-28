@@ -6,7 +6,7 @@
  * `test/openapi.test.ts` fails when a route in src/api.ts is missing here, or the other way round.
  */
 
-export const API_VERSION = '1.2.0';
+export const API_VERSION = '1.3.0';
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 type Schema = { [key: string]: Json };
@@ -178,8 +178,8 @@ export const ERRORS: {
   {
     code: 'invalid_place',
     status: 422,
-    en: 'A place is wrong; detail names the part: kind, address, lat/lng or note.',
-    tr: 'Bir yer hatalı; detail hangi kısmın hatalı olduğunu söyler: kind, address, lat/lng veya note.',
+    en: 'A place is wrong; detail names the part: kind, address, city (not one of the 81 provinces), district (not a district of that province), lat/lng or note.',
+    tr: 'Bir yer hatalı; detail hangi kısmın hatalı olduğunu söyler: kind, address, city (81 ilden biri değil), district (o ilin ilçesi değil), lat/lng veya note.',
   },
   {
     code: 'invalid_attributes',
@@ -806,8 +806,18 @@ export function openapi(origin: string): Schema {
               description:
                 'Street address. Shown only to the agent who claimed the vehicle, only while the claim lasts; erased after the case closes.',
             },
-            district: { type: 'string', maxLength: 60, description: 'İlçe.' },
-            city: { type: 'string', maxLength: 60, description: 'İl. Agents search by city.' },
+            district: {
+              type: 'string',
+              maxLength: 60,
+              description:
+                'İlçe: a district of `city`. Any spelling ("kadikoy", "KADIKÖY") is accepted and stored as the official name ("Kadıköy"). Central districts of the 51 non-metropolitan provinces are "Merkez".',
+            },
+            city: {
+              type: 'string',
+              maxLength: 60,
+              description:
+                'İl: one of Turkey’s 81 provinces, by name in any spelling or by plate code ("34"); stored as the official name ("İstanbul"). Agents search by city and district.',
+            },
             lat: {
               type: 'number',
               minimum: -90,

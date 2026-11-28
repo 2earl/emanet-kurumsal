@@ -185,6 +185,11 @@ export const tr: Catalog = {
     Address: 'Adres',
     District: 'İlçe',
     City: 'İl',
+    'Choose a province': 'İl seçin',
+    'Each place needs an address.': 'Her yer için bir adres girin.',
+    'The city must be one of Turkey’s 81 provinces.': 'İl, Türkiye’nin 81 ilinden biri olmalı.',
+    'That district isn’t in the chosen province. Pick it from the list.':
+      'Bu ilçe seçilen ilde değil. Listeden seçin.',
     Home: 'Ev',
     Work: 'İş',
     'Last seen': 'Son görüldüğü yer',

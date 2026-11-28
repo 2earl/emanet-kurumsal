@@ -121,6 +121,7 @@ export class PartnerApi extends WorkerEntrypoint {
     if (p.status !== 'active') return fail('partner_not_active');
     if (typeof input.plate !== 'string' || !/^\\d{2}[A-Z]{1,3}\\d{2,4}$/.test(input.plate.replace(/\\s/g, '').toUpperCase())) return fail('invalid_plate');
     for (const k of Object.keys(input.attributes ?? {})) if (k !== 'portfolio') return fail('unknown_field', k);
+    for (const place of input.places ?? []) if (place.district === 'Merkez' && place.city === 'İstanbul') return fail('invalid_place', 'district');
     const key = orgId + '|' + input.external_ref;
     const existing = cases.get(key);
     const t = now();
@@ -221,6 +222,13 @@ export class PartnerApi extends WorkerEntrypoint {
       messages: [{ id: 'm1', author_kind: 'requester', body: input.message, created_at: now(),
         attachments: files.map(({ id: fid, name, content_type, size }) => ({ id: fid, name, content_type, size })) }] });
     return ok({ id });
+  }
+  async provinces() {
+    return ok([
+      { code: '06', name: 'Ankara', districts: ['Çankaya', 'Keçiören'] },
+      { code: '34', name: 'İstanbul', districts: ['Beşiktaş', 'Kadıköy', 'Üsküdar'] },
+      { code: '35', name: 'İzmir', districts: ['Bornova', 'Karşıyaka'] },
+    ]);
   }
   async supportAnswerTime() {
     return ok({ p75: 50 * 3600, days: 30 });
